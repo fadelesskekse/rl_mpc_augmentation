@@ -64,10 +64,10 @@
 13. Event funcs that are actually classes:
     - Confirm that the funcs are actually executing
 
-14. reset_base event:
+14. reset_base event: SOLVED
     - Probably need to adjust the yaw and x,y positions based on terrain generation
 
-15. Figure out how to do terrain.
+15. Figure out how to do terrain: SOLVED
 
 16. Need to revisit domain randomization and normalization.
 

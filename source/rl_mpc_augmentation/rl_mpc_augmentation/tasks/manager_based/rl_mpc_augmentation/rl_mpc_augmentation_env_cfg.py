@@ -29,21 +29,21 @@ from assets.g1.g1_bm import G1_BM_CFG # pyright: ignore[reportMissingImports]
 PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0),
     border_width=0.5,
-    num_rows=21,
+    num_rows=30,
     num_cols=4,
-    horizontal_scale=0.1,
-    vertical_scale=10,#.005
+    horizontal_scale=.025,
+    vertical_scale=.025,#.005
     slope_threshold=0.75,
     difficulty_range=(0.0, 1.0),
     use_cache=False,
     sub_terrains={
-        "stairs_up": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(step_height_range = (.01,.25),
+        "stairs_up": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(step_height_range = (.01,.17),
                                                         step_width = .3,
                                                         border_width=1.5,
                                                         platform_width=1.5,
                                                         proportion = .25,),
 
-        "stairs_down": terrain_gen.MeshPyramidStairsTerrainCfg(step_height_range = (.01,.25),
+        "stairs_down": terrain_gen.MeshPyramidStairsTerrainCfg(step_height_range = (.01,.17),
                                                         step_width = .3,
                                                         border_width=1.5,
                                                         platform_width=1.5,
@@ -52,7 +52,19 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
         "rough_flat": terrain_gen.MeshRandomGridTerrainCfg(proportion = .25,
                                                            grid_height_range = (.01,.125),
                                                            grid_width = 1.25,),
-
+        "stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(proportion=.25,
+                                                                  stone_height_max = 0,
+                                                                  stone_distance_range= (.025,.3),
+                                                                  stone_width_range= (.3,.45),
+                                                                  platform_width=.75,
+                                                                  border_width=.5,
+                                                                  holes_depth=-1),
+                                                                #   stone_distance_range = (.05,.2),
+                                                                #   stone_width_range = (.5,1),
+                                                                #   stone_height_max = 0,
+                                                                #   platform_width=1.5,
+                                                                #   border_width=.5,
+                                                                #   holes_depth=-1)
     },
 )
 
@@ -409,7 +421,7 @@ class RewardsCfg:
         params={
             "std": 0.05,
             "tanh_mult": 2.0,
-            "target_height": 0.1,
+            "target_height": 0.2,
             "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
         },
     )
