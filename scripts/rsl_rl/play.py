@@ -79,26 +79,42 @@ from isaaclab_tasks.utils.hydra import hydra_task_config
 
 import rl_mpc_augmentation.tasks  # noqa: F401
 
+from unitree_rl_lab.utils.parser_cfg import parse_env_cfg
+
 
 @hydra_task_config(args_cli.task, args_cli.agent)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     """Play with RSL-RL agent."""
     # grab task name for checkpoint path
-    task_name = args_cli.task.split(":")[-1]
-    train_task_name = task_name.replace("-Play", "")
 
-    # override configurations with non-hydra CLI arguments
-    agent_cfg: RslRlBaseRunnerCfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
-    env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
 
-    # set the environment seed
-    # note: certain randomizations occur in the environment initialization so we set the seed here
-    env_cfg.seed = agent_cfg.seed
-    env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
+    # task_name = args_cli.task.split(":")[-1]
+    # train_task_name = task_name.replace("-Play", "")
+
+    # # override configurations with non-hydra CLI arguments
+    # agent_cfg: RslRlBaseRunnerCfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
+    # env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
+
+    # # set the environment seed
+    # # note: certain randomizations occur in the environment initialization so we set the seed here
+    # env_cfg.seed = agent_cfg.seed
+    # env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
+
+    env_cfg = parse_env_cfg(
+        args_cli.task,
+        device=args_cli.device,
+        num_envs=args_cli.num_envs,
+        use_fabric=not args_cli.disable_fabric,
+        entry_point_key="play_env_cfg_entry_point",
+    )
+    agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
+
+
 
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
     log_root_path = os.path.abspath(log_root_path)
+    
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
     if args_cli.use_pretrained_checkpoint:
         resume_path = get_published_pretrained_checkpoint("rsl_rl", train_task_name)

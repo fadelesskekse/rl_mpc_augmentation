@@ -29,9 +29,9 @@ from assets.g1.g1_bm import G1_BM_CFG # pyright: ignore[reportMissingImports]
 
 PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0),
-    border_width=0.5,
-    num_rows=30,
-    num_cols=4,
+    border_width=2.0,
+    num_rows=10,
+    num_cols=3,
     horizontal_scale=.025,
     vertical_scale=.025,#.005
     slope_threshold=0.75,
@@ -40,27 +40,27 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
     sub_terrains={
         "stairs_up": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(step_height_range = (.01,.17),
                                                         step_width = .3,
-                                                        border_width=1.5,
+                                                        border_width=1.0,
                                                         platform_width=1.5,
-                                                        proportion = .25,),
+                                                        proportion = .33,),
 
         "stairs_down": terrain_gen.MeshPyramidStairsTerrainCfg(step_height_range = (.01,.17),
                                                         step_width = .3,
-                                                        border_width=1.5,
-                                                        platform_width=1.5,
-                                                        proportion = .25,),
+                                                        border_width=1.0,
+                                                        platform_width=1.25,
+                                                        proportion = .33,),
 
-        "rough_flat": terrain_gen.MeshRandomGridTerrainCfg(proportion = .25,
+        "rough_flat": terrain_gen.MeshRandomGridTerrainCfg(proportion = .33,
                                                            grid_height_range = (.01,.125),
-                                                           grid_width = 1.25,),
+                                                           grid_width = 1.5,),
 
-        "stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(proportion=.25,
-                                                                  stone_height_max = 0,
-                                                                  stone_distance_range= (.025,.3),
-                                                                  stone_width_range= (.3,.45),
-                                                                  platform_width=.75,
-                                                                  border_width=.5,
-                                                                  holes_depth=-1),
+        # "stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(proportion=.25,
+        #                                                           stone_height_max = 0,
+        #                                                           stone_distance_range= (.025,.3),
+        #                                                           stone_width_range= (.3,.45),
+        #                                                           platform_width=.75,
+        #                                                           border_width=1.0,
+        #                                                           holes_depth=-1),
                                                         
     },
 )
@@ -93,7 +93,11 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
     robot: ArticulationCfg = G1_BM_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
-
+    # contact_forces = ContactSensorCfg(
+    #     prim_path="{ENV_REGEX_NS}/Robot/.*ankle.*",
+    #     history_length=3,
+    #     track_air_time=True,
+    # )
     # lights
     sky_light = AssetBaseCfg(
         prim_path="/World/skyLight",
@@ -147,13 +151,13 @@ class CommandsCfg:
     # Justification: Provides agent with body frame velocity commands to track 
     base_velocity = mdp.UniformLevelVelocityCommandCfg(
         asset_name="robot",
-        resampling_time_range=(10.0, 10.0),
+        resampling_time_range=(10, 10),
         rel_standing_envs=0.02,
         rel_heading_envs=1.0,
         heading_command=False,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0.0, 0.1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(0.0, 1.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
@@ -192,6 +196,7 @@ class ObservationsCfg:
         # (3) Generated velocity commands
         #Justification: Provide the policy with the target velocity commands
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
+
         
         # (4) Joint relative pos and vels relative to default values in articulation cfg.
         #Justification: Joint pos/vel is standrd proprioception 
@@ -231,7 +236,7 @@ class ObservationsCfg:
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel)
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05)
         last_action = ObsTerm(func=mdp.last_action)
-        # gait_phase = ObsTerm(func=mdp.gait_phase, params={"period": 0.8})
+        #gait_phase = ObsTerm(func=mdp.gait_phase, params={"period": 0.8})
 
 
         def __post_init__(self):
@@ -451,6 +456,7 @@ class RewardsCfg:
     #(11) Penalizes contact with body parts other than feet into anything. 
     #Justification: Encourage only feet to make contact with ground
     # -- other
+
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=-1,
@@ -468,6 +474,9 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     #base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.2})
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
+    course_complete = DoneTerm(func=mdp.sub_terrain_out_of_bounds, params={
+        "distance_buffer": 0,
+    })
 
 
 
@@ -525,6 +534,7 @@ class RobotPlayEnvCfg(RlMpcAugmentationEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.scene.num_envs = 32
-        self.scene.terrain.terrain_generator.num_rows = 2
-        self.scene.terrain.terrain_generator.num_cols = 10
+        self.episode_length_s = 40.0
+        #self.scene.terrain.terrain_generator.num_rows = 2
+       # self.scene.terrain.terrain_generator.num_cols = 10
         self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
