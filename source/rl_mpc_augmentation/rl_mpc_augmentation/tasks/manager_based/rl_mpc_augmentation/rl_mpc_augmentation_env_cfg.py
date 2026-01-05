@@ -19,9 +19,10 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
-from isaaclab.utils import configclass
-from isaaclab.sensors import ContactSensorCfg
+from isaaclab.sensors import ContactSensorCfg, CameraCfg, TiledCameraCfg
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
+from isaaclab.utils import configclass
+
 from . import mdp
 
 from assets.g1.g1_bm import G1_BM_CFG # pyright: ignore[reportMissingImports]
@@ -52,6 +53,7 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
         "rough_flat": terrain_gen.MeshRandomGridTerrainCfg(proportion = .25,
                                                            grid_height_range = (.01,.125),
                                                            grid_width = 1.25,),
+
         "stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(proportion=.25,
                                                                   stone_height_max = 0,
                                                                   stone_distance_range= (.025,.3),
@@ -59,12 +61,7 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
                                                                   platform_width=.75,
                                                                   border_width=.5,
                                                                   holes_depth=-1),
-                                                                #   stone_distance_range = (.05,.2),
-                                                                #   stone_width_range = (.5,1),
-                                                                #   stone_height_max = 0,
-                                                                #   platform_width=1.5,
-                                                                #   border_width=.5,
-                                                                #   holes_depth=-1)
+                                                        
     },
 )
 
@@ -105,6 +102,31 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
             texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
         ),
     )
+
+    # camera = CameraCfg(
+    #     prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/depth_camera",
+    #     update_period=0.1,
+    #     height=480,
+    #     width=640,
+    #     data_types=["depth"],
+    #     spawn=sim_utils.PinholeCameraCfg(
+    #         focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 1.0e5)
+    #     ),
+    #     #offset=CameraCfg.OffsetCfg(pos=(0.510, 0.0, 0.015), rot=(0.5, -0.5, 0.5, -0.5), convention="ros"),
+    #     debug_vis = True,
+    # )
+
+#     tiled_camera: TiledCameraCfg = TiledCameraCfg(
+#     #prim_path="/World/envs/env_.*/Camera",
+#     prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/depth_camera",
+#     #offset=TiledCameraCfg.OffsetCfg(pos=(-7.0, 0.0, 3.0), rot=(0.9945, 0.0, 0.1045, 0.0), convention="world"),
+#     data_types=["depth"],
+#     spawn=sim_utils.PinholeCameraCfg(
+#         focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
+#     ),
+#     width=80,
+#     height=80,
+# )
 
 @configclass
 class CurriculumCfg:
@@ -479,6 +501,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
 
+        self.sim.physx.gpu_collision_stack_size = 150_000_000
         self.sim.physics_material = self.scene.terrain.physics_material
         self.sim.physx.gpu_max_rigid_patch_count = 10 * 2**15
 
