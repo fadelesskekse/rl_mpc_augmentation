@@ -52,7 +52,8 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
 
         "rough_flat": terrain_gen.MeshRandomGridTerrainCfg(proportion = .33,
                                                            grid_height_range = (.01,.125),
-                                                           grid_width = 1.5,),
+                                                           grid_width = .75,
+                                                           platform_width = .75,)
 
         # "stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(proportion=.25,
         #                                                           stone_height_max = 0,
@@ -86,18 +87,15 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
             project_uvw=True,
             texture_scale=(0.25, 0.25),
         ),
-        debug_vis=True,
+        debug_vis=False,
+        
     )
 
     # robot
     robot: ArticulationCfg = G1_BM_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
-    # contact_forces = ContactSensorCfg(
-    #     prim_path="{ENV_REGEX_NS}/Robot/.*ankle.*",
-    #     history_length=3,
-    #     track_air_time=True,
-    # )
+
     # lights
     sky_light = AssetBaseCfg(
         prim_path="/World/skyLight",
@@ -155,12 +153,12 @@ class CommandsCfg:
         rel_standing_envs=0.02,
         rel_heading_envs=1.0,
         heading_command=False,
-        debug_vis=True,
+        debug_vis=False,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0.0, 1.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(1, 1.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
     )
 
@@ -212,6 +210,10 @@ class ObservationsCfg:
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel,noise=Unoise(n_min=-0.01, n_max=0.01))
         base_z_pos = ObsTerm(func=mdp.base_pos_z, noise=Unoise(n_min=-0.2, n_max=0.2))
 
+        gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .8,
+                                                            "offset": [0,.5],
+                                                            })
+
         def __post_init__(self):
             self.history_length = 5
             self.enable_corruption = True
@@ -236,6 +238,9 @@ class ObservationsCfg:
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel)
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05)
         last_action = ObsTerm(func=mdp.last_action)
+        gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .8,
+                                                            "offset": [0,.5],
+                                                            })
         #gait_phase = ObsTerm(func=mdp.gait_phase, params={"period": 0.8})
 
 
@@ -361,7 +366,7 @@ class RewardsCfg:
     # (4) Minimize angular velocity in XY plane
     #Justification: Encourage robot to not tip over
     base_angular_velocity_xy = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
-
+    base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     # (5) Minimize joint effort, action_rate, energy, and penalize hitting joint limit
     # Justification: Keep energy minimal, concurrent actions similar, minimize fast joints
     joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
@@ -534,7 +539,7 @@ class RobotPlayEnvCfg(RlMpcAugmentationEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.scene.num_envs = 32
-        self.episode_length_s = 40.0
+        self.episode_length_s = 20.0
         #self.scene.terrain.terrain_generator.num_rows = 2
        # self.scene.terrain.terrain_generator.num_cols = 10
         self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges

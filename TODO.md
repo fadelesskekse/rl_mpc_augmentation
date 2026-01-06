@@ -15,8 +15,6 @@
     - Should CriticCfg get un-noised observations or even
     additional observations than the PolicyCfg?
 
-    - Confirm scales of Observations are all similar: SOLVED
-
 
 5. Rewards:
     - Confirm rewards are all within similar scale
@@ -53,28 +51,27 @@
 
     - Unclear if I need to use estimated or sim data version in the critic_cfg
 
-11. feet_clearance Reward:
-    - Currently implemented to aid in foot step without vision
-        -Try removing this once vision is added in end-to-end RL
+11. Need to revisit domain randomization and normalization.
 
-12. feet_gait Reward:
-    - Used for end-to-end RL to promote gait
-        -Not used in MPC
+12. Train blind end to end -rl
 
-13. Event funcs that are actually classes:
-    - Confirm that the funcs are actually executing
+13. In mpc_actions, I use preserve_order = True on self._joint_ids. 
+    - Confirm how this works
 
-14. reset_base event: SOLVED
-    - Probably need to adjust the yaw and x,y positions based on terrain generation
+14. For every terrain type (row), plot average difficulty as a metric. 
 
-15. Figure out how to do terrain: SOLVED
 
-16. Need to revisit domain randomization and normalization.
-
-17. Train blind end to end -rl
+####################################################
+19. Early termination if I exceed half of the course?: SOLVED
 
 18. Remove min height early termination? SOLVED
     - Removed, it would mess up the downwards stair climb.
 
-19. Early termination if I exceed half of the course?
+15. Figure out how to do terrain: SOLVED
+
+14. reset_base event: SOLVED
+    - Probably need to adjust the yaw and x,y positions based on terrain generation
+
+2.  - Confirm scales of Observations are all similar: SOLVED
+
 
