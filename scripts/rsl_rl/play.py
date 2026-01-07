@@ -11,6 +11,7 @@ import argparse
 import sys
 
 from isaaclab.app import AppLauncher
+from torch.utils.tensorboard import SummaryWriter
 
 # local imports
 import cli_args  # isort: skip
@@ -34,6 +35,7 @@ parser.add_argument(
     help="Use the pre-trained checkpoint from Nucleus.",
 )
 parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
+parser.add_argument("--log", action="store_true", default=False, help="Log the environment.")
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -109,8 +111,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     )
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
-
-
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
     log_root_path = os.path.abspath(log_root_path)
@@ -131,6 +131,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # set the log directory for the environment (works for all environment types)
     env_cfg.log_dir = log_dir
 
+    print(f"log_dir: {log_dir}")
+
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
 
@@ -149,6 +151,22 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         print("[INFO] Recording videos during training.")
         print_dict(video_kwargs, nesting=4)
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
+
+    play_log_dir = None
+    writer = None
+
+    if args_cli.log:
+        # Find the next available play_N directory
+        play_num = 1
+        while True:
+            play_log_dir = os.path.join(log_dir, f"play_{play_num}")
+            if not os.path.exists(play_log_dir):
+                break
+            play_num += 1
+        os.makedirs(play_log_dir, exist_ok=False)
+        writer = SummaryWriter(log_dir=play_log_dir)
+        
+    
 
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
@@ -193,6 +211,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # reset environment
     obs = env.get_observations()
     timestep = 0
+    global_step = 0
     # simulate environment
     while simulation_app.is_running():
         start_time = time.time()
@@ -201,7 +220,22 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # agent stepping
             actions = policy(obs)
             # env stepping
-            obs, _, _, _ = env.step(actions)
+            obs, _, _, extras = env.step(actions)
+
+            if writer is not None and "log" in extras:
+
+                #print("writer is not None and 'log' was found in extras")
+                
+                for key, value in extras["log"].items():
+
+                    #print(f"key: {key}")
+                    #print(f"value: {value}")
+                    if torch.is_tensor(value):
+                        value = value.item()
+                    writer.add_scalar(key, value, global_step)
+
+            global_step += 1
+
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video

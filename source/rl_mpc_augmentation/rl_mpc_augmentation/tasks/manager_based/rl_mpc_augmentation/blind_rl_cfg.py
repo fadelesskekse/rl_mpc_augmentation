@@ -53,7 +53,7 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
         "rough_flat": terrain_gen.MeshRandomGridTerrainCfg(proportion = .33,
                                                            grid_height_range = (.01,.125),
                                                            grid_width = .75,
-                                                           platform_width = .75,)
+                                                           platform_width = .75,),
 
         # "stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(proportion=.25,
         #                                                           stone_height_max = 0,
@@ -154,6 +154,7 @@ class CommandsCfg:
         rel_heading_envs=1.0,
         heading_command=False,
         debug_vis=False,
+        
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
