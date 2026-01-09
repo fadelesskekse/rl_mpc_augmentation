@@ -76,7 +76,7 @@ class PassToEnvironment(ActionTerm):
     def process_actions(self, actions: torch.Tensor):
         self._raw_actions[:] = actions
 
-        print(f"raw_actions: {self.raw_actions}")
+        #print(f"raw_actions: {self.raw_actions}")
 
         if self.cfg.clip is not None:
 
@@ -85,7 +85,7 @@ class PassToEnvironment(ActionTerm):
                 max=self._clip[:,:,1] 
             )
 
-        print(f"processed_actions: {self.processed_actions}")
+       # print(f"processed_actions: {self.processed_actions}")
 
 
     def apply_actions(self):

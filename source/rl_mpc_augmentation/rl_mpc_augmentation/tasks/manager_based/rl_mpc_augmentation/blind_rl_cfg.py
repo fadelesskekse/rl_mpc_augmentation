@@ -105,42 +105,6 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         ),
     )
 
-    # camera = CameraCfg(
-    #     prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/depth_camera",
-    #     update_period=0.1,
-    #     height=480,
-    #     width=640,
-    #     data_types=["depth"],
-    #     spawn=sim_utils.FisheyeCameraCfg(
-    #         focal_length= .193,
-    #         focus_distance=.6,
-    #         f_stop=2
-    #         projection_type="fisheyePolynomial",
-    #         horizontal_aperture=3.896,
-    #         vertical_aperture=2.453,
-    #         clipping_range=(.01,1000000),
-    #         fisheye_nominal_width=1936,
-    #         fisheye_nominal_height=1216,
-    #         fisheye_optical_centre_x=970.94244,
-    #         fisheye_optical_centre_y=600.37482,
-    #         fisheye_max_fov=100.6,
-    #     ),
-    #     #offset=CameraCfg.OffsetCfg(pos=(0.510, 0.0, 0.015), rot=(0.5, -0.5, 0.5, -0.5), convention="ros"),
-    #     debug_vis = True,
-    # )
-
-#     tiled_camera: TiledCameraCfg = TiledCameraCfg(
-#     #prim_path="/World/envs/env_.*/Camera",
-#     prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/depth_camera",
-#     #offset=TiledCameraCfg.OffsetCfg(pos=(-7.0, 0.0, 3.0), rot=(0.9945, 0.0, 0.1045, 0.0), convention="world"),
-#     data_types=["depth"],
-#     spawn=sim_utils.PinholeCameraCfg(
-#         focal_length=.193, f_stop = 2.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.001, 20.0)
-#     ),
-#     width=424,
-#     height=240,
-# )
-
     # tiled_camera: TiledCameraCfg = TiledCameraCfg(
     #     #prim_path="/World/envs/env_.*/Camera",
     #     prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/depth_camera",
@@ -200,12 +164,12 @@ class ActionsCfg:
         asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True
     )
 
-    # gait_cycle = mdp.PassToEnvironmentCfg(
-    #     asset_name="robot",
-    #     num_vars = 1,
-    #     var_names = ["gait_cycle",],
-    #     clip = {"gait_cycle": (.5, 2)}
-    #     )
+    gait_cycle = mdp.PassToEnvironmentCfg(
+        asset_name="robot",
+        num_vars = 1,
+        var_names = ["gait_cycle",],
+        clip = {"gait_cycle": (.5, 2)}
+        )
 
 @configclass
 class ObservationsCfg:
@@ -247,14 +211,14 @@ class ObservationsCfg:
 
 
 
-        # gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={#"period": .6,
-        #                                                     "offset": [0,.5],
-        #                                                     })
-
-
-        gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
+        gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
                                                             "offset": [0,.5],
                                                             })
+
+
+        # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
+        #                                                     "offset": [0,.5],
+        #                                                     })
 
         def __post_init__(self):
             self.history_length = 5
@@ -280,12 +244,12 @@ class ObservationsCfg:
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel)
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05)
         last_action = ObsTerm(func=mdp.last_action)
-        gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
-                                                            "offset": [0,.5],
-                                                            })
-        #gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
+        # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
         #                                                     "offset": [0,.5],
         #                                                     })
+        gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
+                                                            "offset": [0,.5],
+                                                            })
 
 
         def __post_init__(self):
@@ -478,29 +442,29 @@ class RewardsCfg:
     #(8) Induce a gait pattern
     #Justification: End-to-end RL needs help to learn a gait
     # -- feet #last_action
-    gait = RewTerm(
-        func=mdp.feet_gait,
-        weight=0.5,
-        params={
-            "period": 0.6,
-            "offset": [0.0, 0.5],
-            "threshold": 0.55,
-            "command_name": "base_velocity",
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
-        },
-    )
-
     # gait = RewTerm(
-    #     func=mdp.gait,
+    #     func=mdp.feet_gait,
     #     weight=0.5,
     #     params={
-    #         #"period": 0.6,
+    #         "period": 0.6,
     #         "offset": [0.0, 0.5],
     #         "threshold": 0.55,
     #         "command_name": "base_velocity",
     #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
     #     },
     # )
+
+    gait = RewTerm(
+        func=mdp.gait,
+        weight=0.5,
+        params={
+            #"period": 0.6,
+            "offset": [0.0, 0.5],
+            "threshold": 0.55,
+            "command_name": "base_velocity",
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+        },
+    )
 
     # (9) Penalize foot slip
     #Justification: Penalizes foot velocity during stance.
