@@ -111,8 +111,19 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
     #     height=480,
     #     width=640,
     #     data_types=["depth"],
-    #     spawn=sim_utils.PinholeCameraCfg(
-    #         focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 1.0e5)
+    #     spawn=sim_utils.FisheyeCameraCfg(
+    #         focal_length= .193,
+    #         focus_distance=.6,
+    #         f_stop=2
+    #         projection_type="fisheyePolynomial",
+    #         horizontal_aperture=3.896,
+    #         vertical_aperture=2.453,
+    #         clipping_range=(.01,1000000),
+    #         fisheye_nominal_width=1936,
+    #         fisheye_nominal_height=1216,
+    #         fisheye_optical_centre_x=970.94244,
+    #         fisheye_optical_centre_y=600.37482,
+    #         fisheye_max_fov=100.6,
     #     ),
     #     #offset=CameraCfg.OffsetCfg(pos=(0.510, 0.0, 0.015), rot=(0.5, -0.5, 0.5, -0.5), convention="ros"),
     #     debug_vis = True,
@@ -124,17 +135,32 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
 #     #offset=TiledCameraCfg.OffsetCfg(pos=(-7.0, 0.0, 3.0), rot=(0.9945, 0.0, 0.1045, 0.0), convention="world"),
 #     data_types=["depth"],
 #     spawn=sim_utils.PinholeCameraCfg(
-#         focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 20.0)
+#         focal_length=.193, f_stop = 2.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.001, 20.0)
 #     ),
-#     width=80,
-#     height=80,
+#     width=424,
+#     height=240,
 # )
+
+    # tiled_camera: TiledCameraCfg = TiledCameraCfg(
+    #     #prim_path="/World/envs/env_.*/Camera",
+    #     prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/depth_camera",
+    #     offset=TiledCameraCfg.OffsetCfg(pos=(0, 0.0, 0), rot=(1, 0.0, 0, 0.0), convention="world"),
+    #     data_types=["depth"],
+    #     #width=848,
+    #     #height=480,
+    #     width=424,
+    #     height=240,
+
+    #     spawn=sim_utils.PinholeCameraCfg(
+    #     focal_length=.193, f_stop = 0.0, focus_distance=1, horizontal_aperture=.384, vertical_aperture=.24,clipping_range=(0.001, 1000000.0)
+    #     ),
+    #     )
 
 @configclass
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel,params={"threshold": .5})
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
 
 ##
@@ -150,7 +176,7 @@ class CommandsCfg:
     base_velocity = mdp.UniformLevelVelocityCommandCfg(
         asset_name="robot",
         resampling_time_range=(10, 10),
-        rel_standing_envs=0.02,
+        rel_standing_envs=0,
         rel_heading_envs=1.0,
         heading_command=False,
         debug_vis=False,
@@ -159,7 +185,7 @@ class CommandsCfg:
             lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(1, 1.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
     )
 
@@ -173,6 +199,13 @@ class ActionsCfg:
     JointPositionAction = mdp.JointPositionActionCfg(
         asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True
     )
+
+    # gait_cycle = mdp.PassToEnvironmentCfg(
+    #     asset_name="robot",
+    #     num_vars = 1,
+    #     var_names = ["gait_cycle",],
+    #     clip = {"gait_cycle": (.5, 2)}
+    #     )
 
 @configclass
 class ObservationsCfg:
@@ -206,12 +239,20 @@ class ObservationsCfg:
         #Justification: Standard practice to provide last action as input
         last_action = ObsTerm(func=mdp.last_action)
 
+
         # (6) Body Linear Velocity
         # Justification: Used in reward calculation, can be estimated.
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel,noise=Unoise(n_min=-0.01, n_max=0.01))
-        base_z_pos = ObsTerm(func=mdp.base_pos_z, noise=Unoise(n_min=-0.2, n_max=0.2))
+        #base_lin_vel = ObsTerm(func=mdp.base_lin_vel,noise=Unoise(n_min=-0.01, n_max=0.01))
+        #base_z_pos = ObsTerm(func=mdp.base_pos_z, noise=Unoise(n_min=-0.2, n_max=0.2))
 
-        gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .8,
+
+
+        # gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={#"period": .6,
+        #                                                     "offset": [0,.5],
+        #                                                     })
+
+
+        gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
                                                             "offset": [0,.5],
                                                             })
 
@@ -239,10 +280,12 @@ class ObservationsCfg:
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel)
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05)
         last_action = ObsTerm(func=mdp.last_action)
-        gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .8,
+        gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
                                                             "offset": [0,.5],
                                                             })
-        #gait_phase = ObsTerm(func=mdp.gait_phase, params={"period": 0.8})
+        #gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
+        #                                                     "offset": [0,.5],
+        #                                                     })
 
 
         def __post_init__(self):
@@ -354,6 +397,8 @@ class RewardsCfg:
                 "std": math.sqrt(0.25)},
     )
 
+
+
     # (3) Track yaw angular velocity command
     #Justification: Need to track 0 angular velocity to 
         #keep robot pointed in direction it started in 
@@ -411,26 +456,51 @@ class RewardsCfg:
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
     )
 
+    joint_deviation_ankle = RewTerm(
+        func=mdp.joint_deviation_l1,
+        weight=-1.0,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_ankle_pitch_joint"])},
+    )
+
     #(7) Flat Orientation
     #Justification: Promote robot to be upright
     # -- robot
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
     #base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.78})
 
+    #() Minimize Ankle Torque
+    ankle_torque_min = RewTerm(
+        func=mdp.ankle_torque_min,
+        weight = -.005,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_ankle_pitch_joint"])}
+    )
+
     #(8) Induce a gait pattern
     #Justification: End-to-end RL needs help to learn a gait
-    # -- feet
+    # -- feet #last_action
     gait = RewTerm(
         func=mdp.feet_gait,
         weight=0.5,
         params={
-            "period": 0.8,
+            "period": 0.6,
             "offset": [0.0, 0.5],
             "threshold": 0.55,
             "command_name": "base_velocity",
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
         },
     )
+
+    # gait = RewTerm(
+    #     func=mdp.gait,
+    #     weight=0.5,
+    #     params={
+    #         #"period": 0.6,
+    #         "offset": [0.0, 0.5],
+    #         "threshold": 0.55,
+    #         "command_name": "base_velocity",
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+    #     },
+    # )
 
     # (9) Penalize foot slip
     #Justification: Penalizes foot velocity during stance.
@@ -448,16 +518,16 @@ class RewardsCfg:
     #Justification: Encourages gait with end-to-end blind RL
         #Try removing when not blind.
         #
-    feet_clearance = RewTerm(
-        func=mdp.foot_clearance_reward,
-        weight=1.0,
-        params={
-            "std": 0.05,
-            "tanh_mult": 2.0,
-            "target_height": 0.2,
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
-        },
-    )
+    # feet_clearance = RewTerm(
+    #     func=mdp.foot_clearance_reward,
+    #     weight=1.0,
+    #     params={
+    #         "std": 0.05,
+    #         "tanh_mult": 2.0,
+    #         "target_height": 0.2,
+    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+    #     },
+    # )
 
     #(11) Penalizes contact with body parts other than feet into anything. 
     #Justification: Encourage only feet to make contact with ground
@@ -540,7 +610,8 @@ class RobotPlayEnvCfg(RlMpcAugmentationEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.scene.num_envs = 32
-        self.episode_length_s = 20.0
-        #self.scene.terrain.terrain_generator.num_rows = 2
-       # self.scene.terrain.terrain_generator.num_cols = 10
+        self.episode_length_s = 20
+
+
         self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
+

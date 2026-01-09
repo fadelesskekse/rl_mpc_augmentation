@@ -12,4 +12,5 @@ from unitree_rl_lab.tasks.locomotion.mdp import * # pyright: ignore[reportMissin
 from .rewards import *  # noqa: F401, F403
 from .terminations import *  # noqa: F401, F403
 from .observations import *
-from .commands import *
+from .actions.pass_to_env_action_cfg import *
+from .commands.velocity_command_cfg_clip import *
