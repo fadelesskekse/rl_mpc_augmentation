@@ -21,6 +21,12 @@ def ankle_torque_min(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEn
     
     asset: Articulation = env.scene[asset_cfg.name]
 
+   # print(f"asset.data.soft_joint_pos_limits: {asset.data.soft_joint_pos_limits}")
+
+   # print(f"asset.data.ids: {asset.data.joint_names}")
+
+    asset.data.joint_vel_limits
+    
     ankle_torque = asset.data.applied_torque[:, asset_cfg.joint_ids]
     ankle_torque_mean = ankle_torque.mean(dim=1)
     return ankle_torque_mean
@@ -31,6 +37,7 @@ def gait(
     env: ManagerBasedRLEnv,
     offset: list[float],
     sensor_cfg: SceneEntityCfg,
+    nominal: float = .5,
     threshold: float = 0.5,
     command_name=None,
 ) -> torch.Tensor:
@@ -39,7 +46,7 @@ def gait(
     period = env.action_manager.get_term("gait_cycle").processed_actions
     
 
-    eps = .5 # or any small positive value
+    eps = nominal # or any small positive value
     period = torch.where(period == 0, eps, period)
 
    # print(f"period in reward: {period}")
@@ -69,3 +76,30 @@ def gait(
         cmd_norm = torch.norm(env.command_manager.get_command(command_name), dim=1)
         reward *= cmd_norm > 0.1
     return reward
+
+
+def gait_deviation(env: ManagerBasedRLEnv,
+                   nominal: float = .5,) -> torch.Tensor:
+   
+   period_action = env.action_manager.get_term("gait_cycle").raw_actions
+
+  # print(f"shape of period: {period_action}")
+
+   nominal_period = nominal
+
+   lam: float = 4.6
+
+   gait_err = torch.abs(period_action - nominal_period)
+
+  # print(f"shape fo gait err: {gait_err}")
+
+   rew = torch.exp(-lam*gait_err)
+
+   rew = rew.squeeze(-1)
+
+   #print(f"shape fo rew: {rew}")
+
+   
+
+   return rew
+
