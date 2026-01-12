@@ -380,7 +380,7 @@ class RewardsCfg:
 
     gait_deviation = RewTerm(
         func=mdp.gait_deviation,
-        weight = 0.75,
+        weight = 0.05,
         params={
             "nominal": .5
         }
