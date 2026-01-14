@@ -134,7 +134,7 @@ class CommandsCfg:
             lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(1, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
     )
 
@@ -150,7 +150,7 @@ class ActionsCfg:
         joint_names=[".*"], 
         scale=.25, #0.25
         use_default_offset=True,
-        clip={"a":(1,1)},
+        #clip={"a":(1,1)},
         
     )
 
@@ -374,13 +374,13 @@ class RewardsCfg:
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
 
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
-    dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
+   # dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
 
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
     gait_deviation = RewTerm(
         func=mdp.gait_deviation,
-        weight = 0.75,
+        weight = 0.25,
         params={
             "nominal": .5
         }
