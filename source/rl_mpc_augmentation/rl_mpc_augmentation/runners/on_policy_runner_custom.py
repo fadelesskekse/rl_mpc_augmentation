@@ -30,15 +30,15 @@ class OnPolicyRunnerCustom:
         self.cfg = train_cfg
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
-        self.estimator_cfg = train_cfg["estimator"]
+       # self.estimator_cfg = train_cfg["estimator"]
         #self.depth_encoder_cfg = train_cfg["depth_encoder"]
         self.device = device
         self.env = env
 
         ###################c######################
-        self.estimator_cfg["num_prop"] = env.cfg.n_proprio
-        self.estimator_cfg["num_scan"] = env.cfg.n_scan
-        self.estimator_cfg["priv_states_dim"] = env.cfg.n_priv
+        #self.estimator_cfg["num_prop"] = env.cfg.n_proprio
+       # self.estimator_cfg["num_scan"] = env.cfg.n_scan
+        #self.estimator_cfg["priv_states_dim"] = env.cfg.n_priv
 
         #print("n_scan in onPolicy workaroudn:", self.estimator_cfg["num_scan"])
         #print(f"train_cfg_dict: {train_cfg}")
@@ -471,7 +471,7 @@ class OnPolicyRunnerCustom:
 
         #Added estimator
 
-        estimator = Estimator(input_dim=self.env.cfg.n_proprio, output_dim=self.env.cfg.n_priv, hidden_dims=self.estimator_cfg["hidden_dims"]).to(self.device)
+        #estimator = Estimator(input_dim=self.env.cfg.n_proprio, output_dim=self.env.cfg.n_priv, hidden_dims=self.estimator_cfg["hidden_dims"]).to(self.device)
 
         ############cn################
 
