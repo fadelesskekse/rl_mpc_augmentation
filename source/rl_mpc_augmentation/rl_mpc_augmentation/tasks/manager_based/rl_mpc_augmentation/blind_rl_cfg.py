@@ -538,6 +538,14 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
+
+    n_scan:int = 132 #not an observation dimension. Don't specify in obs group.
+    n_priv:int = 3+3 +3 #is an obs dimension
+    n_priv_latent = 4 + 1 + 12 +12 #not an obs dimension
+    n_proprio = 3 + 2 + 3 + 4 + 36 + 5 #is an obs dimension
+    history_len = 10
+
+
     # Post initialization
     def __post_init__(self) -> None:
         """Post initialization."""
@@ -567,6 +575,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
         else:
             if self.scene.terrain.terrain_generator is not None:
                 self.scene.terrain.terrain_generator.curriculum = False
+
 
 
 @configclass

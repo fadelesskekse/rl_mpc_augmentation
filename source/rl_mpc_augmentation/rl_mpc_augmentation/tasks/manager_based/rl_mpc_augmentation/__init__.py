@@ -10,6 +10,7 @@ from . import agents
 TASK_IDS = [
 
     "blind_rl",
+    "phase_1_scan_rl",
 ]
 
 ENTRY_POINTS = [
@@ -21,8 +22,13 @@ ENTRY_POINTS = [
         "play_env_cfg_entry_point": f"{__name__}.blind_rl_cfg:RobotPlayEnvCfg",
     },
 
-    
+    {
+        "env_cfg_entry_point": f"{__name__}.blind_rl_cfg:RlMpcAugmentationEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:PPORunnerCfgCustom",
+        "play_env_cfg_entry_point": f"{__name__}.blind_rl_cfg:RobotPlayEnvCfg",
+    },
 
+    
 ]
 
 for i in range(len(TASK_IDS)):

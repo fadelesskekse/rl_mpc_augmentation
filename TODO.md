@@ -2,8 +2,7 @@
 1. track_lin_vel_xy Reward:
     - Currently uses simulation yaw frame velocity, need to create way to estimate this.
 
-2. track_ang_vel_z Reward:
-    - Currently uses body frame ang vel from sim, need to make sure it takes in a noise augmented signal to approximate IMU reading.
+    - Implement estiamtor
 
 3. JointPositionAction:
     - Do I need to use 'preserve_order'?
@@ -52,14 +51,34 @@
     - Unclear if I need to use estimated or sim data version in the critic_cfg
 
 11. Need to revisit domain randomization and normalization.
+    - Add randomized motor gains
+    - Add randomized CoM
+
 
 12. Train blind end to end -rl
 
-13. In mpc_actions, I use preserve_order = True on self._joint_ids. 
-    - Confirm how this works
+13. Create a new train_cfg that is passed to my custom OnPolicyRunner
 
-14. For every terrain type (row), plot average difficulty as a metric. 
+14. resolve_rnd_config in OnPolicyRunner constructalgorithm().
+    - Is this called during operation?
 
+
+17. Implement exeception errors for:
+    - Check dimension of each extreme_parkour related obs group, and check if it matches the hard coded dimension that I copied from extreme parkour
+
+20. extreme parkour policy cfg has "continue_from_last_std" is this a thing for the new one? 
+
+21. How does history_len I defined in env.cfg relate to any other history buffers I am currently using for my obs groups. That might need to be specified differently. 
+
+22. onPolictyRunnerCustom successfully creates ActorCriticRMA, but there is still work that needs to be done inside of ActorCriticRMA. 
+
+    - I think estimator creation is fine for now.
+
+23. The dimension sizes that get passed to Actor are only for extreme parkour values, this needs to be updated a lot
+    - The num_actions passed to Actor is from env.num_actions, not a hard-coded/ported value from extreme parkour. The num_actions passed to Actor in extreme parkour is hard coded.
+        - Need to make sure this works properly. 
+
+ Next step is creating a custom PPO
 
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED
@@ -73,5 +92,12 @@
     - Probably need to adjust the yaw and x,y positions based on terrain generation
 
 2.  - Confirm scales of Observations are all similar: SOLVED
+
+
+14. For every terrain type (row), plot average difficulty as a metric. : SOLVED
+    - Only turn on during inference, it slows down training a ton
+
+13. In mpc_actions, I use preserve_order = True on self._joint_ids. :SOLVED
+    - Don't use it, its not needed. 
 
 
