@@ -78,6 +78,8 @@
     - The num_actions passed to Actor is from env.num_actions, not a hard-coded/ported value from extreme parkour. The num_actions passed to Actor in extreme parkour is hard coded.
         - Need to make sure this works properly. 
 
+24. num_critic_obs needs to be carefully setup to include all observations specified in isaaclab obs groups and confirmed that the obs groups that correspond to extreme_parkour observations match the number of hard_coded values I copied over. 
+
  Next step is creating a custom PPO
 
 ####################################################

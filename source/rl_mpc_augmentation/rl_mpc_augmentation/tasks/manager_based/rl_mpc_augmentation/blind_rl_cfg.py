@@ -541,9 +541,10 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
 
     n_scan:int = 132 #not an observation dimension. Don't specify in obs group.
     n_priv:int = 3+3 +3 #is an obs dimension
-    n_priv_latent = 4 + 1 + 12 +12 #not an obs dimension
-    n_proprio = 3 + 2 + 3 + 4 + 36 + 5 #is an obs dimension
-    history_len = 10
+    n_priv_latent:int = 4 + 1 + 12 +12 #not an obs dimension
+    n_proprio:int = 3 + 2 + 3 + 4 + 36 + 5 #is an obs dimension
+    history_len:int = 10
+    num_critic_obs:int = n_scan + history_len*n_proprio + n_priv_latent + n_priv 
 
 
     # Post initialization

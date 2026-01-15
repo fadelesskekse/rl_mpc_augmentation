@@ -197,7 +197,7 @@ class ActorCriticRMA(nn.Module):
         ########## custom ############
         num_prop,
         num_scan,
-        num_critic_obs, #I think this is depracated to pass in as it gets 0'ed out. 
+        num_critic_extra, 
         num_priv_latent, 
         num_priv_explicit,
         num_hist,
