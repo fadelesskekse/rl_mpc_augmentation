@@ -459,7 +459,7 @@ class OnPolicyRunnerCustom:
                                                               num_actions = self.env.num_actions,
                                                               num_prop = self.env.cfg.n_proprio,
                                                               num_scan = self.env.cfg.n_scan,
-                                                              num_critic_obs = 0,
+                                                              num_critic_extra = self.env.cfg.num_critic_obs,
                                                               num_priv_latent = self.env.cfg.n_priv_latent,
                                                               num_priv_explicit = self.env.cfg.n_priv,
                                                               num_hist = self.env.cfg.history_len,
