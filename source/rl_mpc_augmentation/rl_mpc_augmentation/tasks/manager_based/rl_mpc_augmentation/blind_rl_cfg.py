@@ -366,8 +366,8 @@ class RewardsCfg:
     # (4) Minimize angular velocity in XY plane
     #Justification: Encourage robot to not tip over
     base_angular_velocity_xy = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
-    base_linear_velocity = RewTerm(func=mdp.lin_vel_z_negative_l2, weight=4.0)
-    base_linear_velocity = RewTerm(func=mdp.lin_vel_z_positive_l2, weight=2.0)
+    base_linear_velocity_down = RewTerm(func=mdp.lin_vel_z_negative_l2, weight=4.0)
+    base_linear_velocity_up = RewTerm(func=mdp.lin_vel_z_positive_l2, weight=2.0)
     # (5) Minimize joint effort, action_rate, energy, and penalize hitting joint limit
     # Justification: Keep energy minimal, concurrent actions similar, minimize fast joints
     joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
