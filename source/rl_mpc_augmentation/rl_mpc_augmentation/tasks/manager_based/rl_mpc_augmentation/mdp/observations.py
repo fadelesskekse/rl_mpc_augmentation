@@ -16,9 +16,10 @@ from typing import TYPE_CHECKING
 
 from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
+from isaaclab.sensors import RayCaster
 
 if TYPE_CHECKING:
-    from isaaclab.envs import ManagerBasedRLEnv
+    from isaaclab.envs import ManagerBasedRLEnv, ManagerBasedEnv
 
 def gait_cycle_var(
     env: ManagerBasedRLEnv,
@@ -80,3 +81,14 @@ def gait_cycle(
 
     return leg_phase
 
+
+def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+
+ 
+    # extract the used quantities (to enable type-hinting)
+    sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
+
+    #print(f"sensor data count: {sensor.num_instances}") #One scan_dot sensor
+    data = sensor.data
+    
+    return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2]
