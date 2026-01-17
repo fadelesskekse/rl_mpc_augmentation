@@ -210,35 +210,24 @@ class ObservationsCfg:
 
         # observation terms (order preserved)
 
-        # (1) Base Angular velocity
-        #Justification: Body Frame Angular Velocity directly from IMU
+
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2))
         
-        # (2) Projected gravity in body frame
-        #Justification: IMU measures gravity direction with accelerometer
+
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
 
-        # (3) Generated velocity commands
-        #Justification: Provide the policy with the target velocity commands
+
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
 
-        
-        # (4) Joint relative pos and vels relative to default values in articulation cfg.
-        #Justification: Joint pos/vel is standrd proprioception 
+    
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5))
         
-        # (5) Last action taken
-        #Justification: Standard practice to provide last action as input
+
         last_action = ObsTerm(func=mdp.last_action)
 
-
-        # (6) Body Linear Velocity
-        # Justification: Used in reward calculation, can be estimated.
         #base_lin_vel = ObsTerm(func=mdp.base_lin_vel,noise=Unoise(n_min=-0.01, n_max=0.01))
         #base_z_pos = ObsTerm(func=mdp.base_pos_z, noise=Unoise(n_min=-0.2, n_max=0.2))
-
-
 
         gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
                                                             "offset": [0,.5],
@@ -261,10 +250,7 @@ class ObservationsCfg:
     class CriticCfg(ObsGroup):
         """Observations for critic group."""
 
-        # (1) Base Linear Velocity
-        #Justification: In order to better estimate value function,
-        #we pass in sim generated base linear velocity instead of observation of
-        #linear velocity estimate
+
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
         base_z_pos = ObsTerm(func=mdp.base_pos_z)
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2)
