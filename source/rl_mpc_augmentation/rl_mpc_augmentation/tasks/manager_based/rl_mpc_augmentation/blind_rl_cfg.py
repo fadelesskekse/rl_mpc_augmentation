@@ -382,7 +382,7 @@ class RewardsCfg:
 
     gait_deviation = RewTerm(
         func=mdp.gait_deviation,
-        weight = 0.25,
+        weight = 0.1,
         params={
             "nominal": .5
         }
@@ -392,7 +392,7 @@ class RewardsCfg:
     # Justification: Encourage robot to stay near nominal pose
     joint_deviation_arms = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.13,
+        weight=-0.25,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot",
@@ -424,7 +424,7 @@ class RewardsCfg:
 
     joint_deviation_ankle = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1.0,
+        weight=-.5,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_ankle_pitch_joint"])},
     )
 
