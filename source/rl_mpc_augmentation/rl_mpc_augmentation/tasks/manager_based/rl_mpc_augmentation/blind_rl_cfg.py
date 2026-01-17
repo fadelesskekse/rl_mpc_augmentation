@@ -545,6 +545,8 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     n_priv_latent = 4 + 1 + 12 +12 #not an obs dimension
     n_proprio = 3 + 2 + 3 + 4 + 36 + 5 #is an obs dimension
     history_len = 10
+    num_critic_obs:int = n_scan + history_len*n_proprio + n_priv_latent + n_priv 
+
 
 
     # Post initialization
