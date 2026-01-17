@@ -19,11 +19,10 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
-from isaaclab.sensors import ContactSensorCfg #CameraCfg, TiledCameraCfg
-from isaaclab.sensors.ray_caster import RayCasterCfg, patterns
+from isaaclab.sensors import ContactSensorCfg#, CameraCfg, TiledCameraCfg
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.utils import configclass
-
+from isaaclab.sensors.ray_caster import RayCasterCfg, patterns
 from . import mdp
 
 from assets.g1.g1_bm import G1_BM_CFG # pyright: ignore[reportMissingImports]
@@ -107,34 +106,41 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
     )
 
     # tiled_camera: TiledCameraCfg = TiledCameraCfg(
-    #     #prim_path="/World/envs/env_.*/Camera",
-    #     prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/depth_camera",
-    #     offset=TiledCameraCfg.OffsetCfg(pos=(0, 0.0, 0), rot=(1, 0.0, 0, 0.0), convention="world"),
-    #     data_types=["depth"],
-    #     #width=848,
-    #     #height=480,
-    #     width=424,
-    #     height=240,
+    # #prim_path="/World/envs/env_.*/Camera",
+    # prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/depth_camera",
+    # offset=TiledCameraCfg.OffsetCfg(pos=(0, 0.0, 0), rot=(1, 0.0, 0, 0.0), convention="world"),
+    # data_types=["depth"],
+    # #width=848,
+    # #height=480,
+    # width=424,
+    # height=240,
 
-    #     spawn=sim_utils.PinholeCameraCfg(
-    #     focal_length=.193, f_stop = 0.0, focus_distance=1, horizontal_aperture=.384, vertical_aperture=.24,clipping_range=(0.001, 1000000.0)
-    #     ),
-    #     )
+    # spawn=sim_utils.PinholeCameraCfg(
+    # focal_length=.193, f_stop = 0.0, focus_distance=1, horizontal_aperture=.384, vertical_aperture=.24,clipping_range=(0.001, 1000000.0)
+    # ),
+    # )
 
-      # sensors
+    # sensors
     scan_dot = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/depth_camera",
-        #offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        ray_alignment="yaw",
-        pattern_cfg=patterns.PinholeCameraPatternCfg(
-            focal_length=.193,
-            horizontal_aperture=.384,
-            vertical_aperture=.24,
-            width=424,
-            height=240,),
-        debug_vis=True,
-        update_period=1/60,
-        mesh_prim_paths=["/World/ground"],
+    prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link",
+    #offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    ray_alignment="yaw",
+
+    # pattern_cfg=patterns.PinholeCameraPatternCfg(
+    # focal_length=.193,
+    # horizontal_aperture=.384,
+    # vertical_aperture=.24,
+    # width=424,
+    # height=240,),
+
+    pattern_cfg=patterns.GridPatternCfg(
+        resolution=.196, #in meters, length then width
+        size=(1.625,2.6), #in meters,length then width
+    ),
+
+    debug_vis=True,
+    update_period=1/60,
+    mesh_prim_paths=["/World/ground"],
     )
 
 @configclass
@@ -182,7 +188,7 @@ class ActionsCfg:
         joint_names=[".*"], 
         scale=.25, #0.25
         use_default_offset=True,
-        clip={"a":(1,1)},
+        #clip={"a":(1,1)},
         
     )
 
@@ -201,37 +207,28 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
-        # observation terms (order preserved)
+        # scan_dot = ObsTerm(func=mdp.scan_dot, 
+        #         scale = .2,
+        #         params={
+        #             #"asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+        #             "sensor_cfg": SceneEntityCfg("scan_dot",),
+        #         },
+        # )
 
-        # (1) Base Angular velocity
-        #Justification: Body Frame Angular Velocity directly from IMU
+
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2))
-        
-        # (2) Projected gravity in body frame
-        #Justification: IMU measures gravity direction with accelerometer
+
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
 
-        # (3) Generated velocity commands
-        #Justification: Provide the policy with the target velocity commands
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
 
-        
-        # (4) Joint relative pos and vels relative to default values in articulation cfg.
-        #Justification: Joint pos/vel is standrd proprioception 
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5))
-        
-        # (5) Last action taken
-        #Justification: Standard practice to provide last action as input
+
         last_action = ObsTerm(func=mdp.last_action)
 
-
-        # (6) Body Linear Velocity
-        # Justification: Used in reward calculation, can be estimated.
         #base_lin_vel = ObsTerm(func=mdp.base_lin_vel,noise=Unoise(n_min=-0.01, n_max=0.01))
         #base_z_pos = ObsTerm(func=mdp.base_pos_z, noise=Unoise(n_min=-0.2, n_max=0.2))
-
-
 
         gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
                                                             "offset": [0,.5],
@@ -254,10 +251,7 @@ class ObservationsCfg:
     class CriticCfg(ObsGroup):
         """Observations for critic group."""
 
-        # (1) Base Linear Velocity
-        #Justification: In order to better estimate value function,
-        #we pass in sim generated base linear velocity instead of observation of
-        #linear velocity estimate
+
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
         base_z_pos = ObsTerm(func=mdp.base_pos_z)
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2)
@@ -406,13 +400,13 @@ class RewardsCfg:
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
 
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
-    dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
+   # dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
 
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
     gait_deviation = RewTerm(
         func=mdp.gait_deviation,
-        weight = -.005,
+        weight = 0.25,
         params={
             "nominal": .5
         }
@@ -570,6 +564,14 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
+
+    n_scan:int = 132 #not an observation dimension. Don't specify in obs group.
+    n_priv:int = 3+3 +3 #is an obs dimension
+    n_priv_latent = 4 + 1 + 12 +12 #not an obs dimension
+    n_proprio = 3 + 2 + 3 + 4 + 36 + 5 #is an obs dimension
+    history_len = 10
+
+
     # Post initialization
     def __post_init__(self) -> None:
         """Post initialization."""
@@ -599,6 +601,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
         else:
             if self.scene.terrain.terrain_generator is not None:
                 self.scene.terrain.terrain_generator.curriculum = False
+
 
 
 @configclass

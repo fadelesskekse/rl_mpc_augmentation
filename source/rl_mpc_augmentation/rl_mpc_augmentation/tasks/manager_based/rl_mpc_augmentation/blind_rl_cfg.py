@@ -134,7 +134,7 @@ class CommandsCfg:
             lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(1, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
     )
 
@@ -158,7 +158,7 @@ class ActionsCfg:
         asset_name="robot",
         num_vars = 1,
         var_names = ["gait_cycle",],
-        clip = {"gait_cycle": (.5, 2)}
+        clip = {"gait_cycle": (.4, 2)}
         )
 
 @configclass
@@ -366,7 +366,8 @@ class RewardsCfg:
     # (4) Minimize angular velocity in XY plane
     #Justification: Encourage robot to not tip over
     base_angular_velocity_xy = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
-    base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
+    base_linear_velocity = RewTerm(func=mdp.lin_vel_z_negative_l2, weight=4.0)
+    base_linear_velocity = RewTerm(func=mdp.lin_vel_z_positive_l2, weight=2.0)
     # (5) Minimize joint effort, action_rate, energy, and penalize hitting joint limit
     # Justification: Keep energy minimal, concurrent actions similar, minimize fast joints
     joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
@@ -374,13 +375,13 @@ class RewardsCfg:
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
 
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
-   # dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
+    dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
 
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
     gait_deviation = RewTerm(
         func=mdp.gait_deviation,
-        weight = 0.25,
+        weight = 0.1,
         params={
             "nominal": .5
         }
@@ -390,7 +391,7 @@ class RewardsCfg:
     # Justification: Encourage robot to stay near nominal pose
     joint_deviation_arms = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.13,
+        weight=-0.25,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot",
@@ -422,7 +423,7 @@ class RewardsCfg:
 
     joint_deviation_ankle = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1.0,
+        weight=-.5, # was -1
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_ankle_pitch_joint"])},
     )
 

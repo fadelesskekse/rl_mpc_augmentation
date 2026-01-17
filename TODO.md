@@ -80,6 +80,22 @@
 
  Next step is creating a custom PPO
 
+ 24. Blind rl tuning:
+    - dropped ankle joint limit penalty weight from -1 to -.5
+    - dropped gait_deviation weight from .25 to .1
+    - changed z vel to reward positive z vel and penalize negative
+        - Goal is to improve upward stair climbing while retaining penalization of hopping and downward stair climbing. 
+        - made positive weight 2 and negative penalty 4
+    - Changed min gait cycle to .4
+    - Readded max velocity joint penalization.
+    - changed arm deviation weight from -.13 to -.25
+        - Weird nominal arm placements sometimes
+
+    - run tonight on 
+
+    
+
+
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED
 

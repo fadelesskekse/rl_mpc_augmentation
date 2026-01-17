@@ -23,9 +23,9 @@ ENTRY_POINTS = [
     },
 
     {
-        "env_cfg_entry_point": f"{__name__}.blind_rl_cfg:RlMpcAugmentationEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.vision_rl_cfg:RlMpcAugmentationEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:PPORunnerCfgCustom",
-        "play_env_cfg_entry_point": f"{__name__}.blind_rl_cfg:RobotPlayEnvCfg",
+        "play_env_cfg_entry_point": f"{__name__}.vision_rl_cfg:RobotPlayEnvCfg",
     },
 
     
