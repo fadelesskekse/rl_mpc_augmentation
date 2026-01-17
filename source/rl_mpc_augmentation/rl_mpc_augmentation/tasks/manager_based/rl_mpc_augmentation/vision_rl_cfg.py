@@ -207,13 +207,13 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
-        # scan_dot = ObsTerm(func=mdp.scan_dot, 
-        #         scale = .2,
-        #         params={
-        #             #"asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
-        #             "sensor_cfg": SceneEntityCfg("scan_dot",),
-        #         },
-        # )
+        scan_dot = ObsTerm(func=mdp.scan_dot, 
+                scale = .2,
+                params={
+                    #"asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+                    "sensor_cfg": SceneEntityCfg("scan_dot",),
+                },
+        )
 
 
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2))
