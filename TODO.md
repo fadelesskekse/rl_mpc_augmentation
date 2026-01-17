@@ -78,8 +78,22 @@
     - The num_actions passed to Actor is from env.num_actions, not a hard-coded/ported value from extreme parkour. The num_actions passed to Actor in extreme parkour is hard coded.
         - Need to make sure this works properly. 
 
-24. num_critic_obs needs to be carefully setup to include all observations specified in isaaclab obs groups and confirmed that the obs groups that correspond to extreme_parkour observations match the number of hard_coded values I copied over. 
+ Next step is creating a custom PPO
 
+ 24. Blind rl tuning:
+    - dropped ankle joint limit penalty weight from -1 to -.5
+    - dropped gait_deviation weight from .25 to .1
+    - changed z vel to reward positive z vel and penalize negative
+        - Goal is to improve upward stair climbing while retaining penalization of hopping and downward stair climbing. 
+        - made positive weight 2 and negative penalty 4
+    - Changed min gait cycle to .4
+    - Readded max velocity joint penalization.
+    - changed arm deviation weight from -.13 to -.25
+        - Weird nominal arm placements sometimes
+
+    - run tonight on 
+
+    
  Next step is creating a custom PPO
 
 ####################################################
