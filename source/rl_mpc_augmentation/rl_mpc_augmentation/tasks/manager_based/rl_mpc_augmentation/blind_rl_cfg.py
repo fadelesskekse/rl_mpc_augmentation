@@ -134,7 +134,7 @@ class CommandsCfg:
             lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(1, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
     )
 
@@ -158,7 +158,7 @@ class ActionsCfg:
         asset_name="robot",
         num_vars = 1,
         var_names = ["gait_cycle",],
-        clip = {"gait_cycle": (.5, 2)}
+        clip = {"gait_cycle": (.4, 2)}
         )
 
 @configclass
@@ -374,7 +374,7 @@ class RewardsCfg:
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
 
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
-   # dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
+    dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
 
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
