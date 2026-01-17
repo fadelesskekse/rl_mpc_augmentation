@@ -209,6 +209,12 @@ class ObservationsCfg:
         """Observations for policy group."""
 
         # observation terms (order preserved)
+        scan_dot = ObsTerm(func=mdp.scan_dot, 
+                scale = .2,
+                params={
+                    "sensor_cfg": SceneEntityCfg("scan_dot",),
+                },
+        )
 
 
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2))
@@ -399,7 +405,7 @@ class RewardsCfg:
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
 
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
-    dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
+    #dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
 
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
@@ -563,6 +569,14 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
+
+    n_scan:int = 132 #not an observation dimension. Don't specify in obs group.
+    n_priv:int = 3+3 +3 #is an obs dimension
+    n_priv_latent:int = 4 + 1 + 12 +12 #not an obs dimension
+    n_proprio:int = 3 + 2 + 3 + 4 + 36 + 5 #is an obs dimension
+    history_len:int = 10
+    num_critic_obs:int = n_scan + history_len*n_proprio + n_priv_latent + n_priv 
+
     # Post initialization
     def __post_init__(self) -> None:
         """Post initialization."""
