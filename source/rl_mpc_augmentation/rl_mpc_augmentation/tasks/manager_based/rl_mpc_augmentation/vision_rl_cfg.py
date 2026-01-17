@@ -107,34 +107,41 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
     )
 
     # tiled_camera: TiledCameraCfg = TiledCameraCfg(
-    #     #prim_path="/World/envs/env_.*/Camera",
-    #     prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/depth_camera",
-    #     offset=TiledCameraCfg.OffsetCfg(pos=(0, 0.0, 0), rot=(1, 0.0, 0, 0.0), convention="world"),
-    #     data_types=["depth"],
-    #     #width=848,
-    #     #height=480,
-    #     width=424,
-    #     height=240,
+    # #prim_path="/World/envs/env_.*/Camera",
+    # prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/depth_camera",
+    # offset=TiledCameraCfg.OffsetCfg(pos=(0, 0.0, 0), rot=(1, 0.0, 0, 0.0), convention="world"),
+    # data_types=["depth"],
+    # #width=848,
+    # #height=480,
+    # width=424,
+    # height=240,
 
-    #     spawn=sim_utils.PinholeCameraCfg(
-    #     focal_length=.193, f_stop = 0.0, focus_distance=1, horizontal_aperture=.384, vertical_aperture=.24,clipping_range=(0.001, 1000000.0)
-    #     ),
-    #     )
+    # spawn=sim_utils.PinholeCameraCfg(
+    # focal_length=.193, f_stop = 0.0, focus_distance=1, horizontal_aperture=.384, vertical_aperture=.24,clipping_range=(0.001, 1000000.0)
+    # ),
+    # )
 
-      # sensors
+    # sensors
     scan_dot = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/depth_camera",
-        #offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        ray_alignment="yaw",
-        pattern_cfg=patterns.PinholeCameraPatternCfg(
-            focal_length=.193,
-            horizontal_aperture=.384,
-            vertical_aperture=.24,
-            width=424,
-            height=240,),
-        debug_vis=True,
-        update_period=1/60,
-        mesh_prim_paths=["/World/ground"],
+    prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link",
+    #offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    ray_alignment="yaw",
+
+    # pattern_cfg=patterns.PinholeCameraPatternCfg(
+    # focal_length=.193,
+    # horizontal_aperture=.384,
+    # vertical_aperture=.24,
+    # width=424,
+    # height=240,),
+
+    pattern_cfg=patterns.GridPatternCfg(
+        resolution=.196, #in meters, length then width
+        size=(1.625,2.6), #in meters,length then width
+    ),
+
+    debug_vis=True,
+    update_period=1/60,
+    mesh_prim_paths=["/World/ground"],
     )
 
 @configclass
@@ -182,7 +189,7 @@ class ActionsCfg:
         joint_names=[".*"], 
         scale=.25, #0.25
         use_default_offset=True,
-        clip={"a":(1,1)},
+        #clip={"a":(1,1)},
         
     )
 
