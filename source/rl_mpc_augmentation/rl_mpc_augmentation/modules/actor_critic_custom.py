@@ -238,6 +238,11 @@ class ActorCriticRMA(nn.Module):
         for obs_group in obs_groups["policy"]:
             assert len(obs[obs_group].shape) == 2, "The ActorCritic module only supports 1D observations."
             num_actor_obs += obs[obs_group].shape[-1]
+
+            print(f"obs group first 3:  {obs[obs_group][:, :3]}")
+            print(f"obs group next 3:   {obs[obs_group][:, 3:6]}")
+
+
         num_critic_obs = 0
         for obs_group in obs_groups["critic"]:
             assert len(obs[obs_group].shape) == 2, "The ActorCritic module only supports 1D observations."

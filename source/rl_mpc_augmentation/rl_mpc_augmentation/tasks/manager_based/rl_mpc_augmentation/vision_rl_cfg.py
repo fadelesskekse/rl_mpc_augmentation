@@ -208,36 +208,47 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
-        # observation terms (order preserved)
-        scan_dot = ObsTerm(func=mdp.scan_dot, 
-                scale = .2,
-                params={
-                    "sensor_cfg": SceneEntityCfg("scan_dot",),
-                },
-        )
-
-
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2))
+        """IMPORTANT:
         
+        First obs should be scan_dot
+        Second obs should be lin vel
+        third obs should be priv_latent_pre_encode
+        4th 
+        """
 
-        projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
 
-
-        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
-
-    
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5))
+        # test_1 = ObsTerm(func=mdp.test_1,
+        #                  scale =1,
+        #                  history_length=0 )
         
+        # test_2 = ObsTerm(func=mdp.test_2,
+        #                  scale =1,
+        #                  history_length=0)
 
-        last_action = ObsTerm(func=mdp.last_action)
+        # # observation terms (order preserved)
+        # scan_dot = ObsTerm(func=mdp.scan_dot, 
+        #         scale = .2,
+        #         params={
+        #             "sensor_cfg": SceneEntityCfg("scan_dot",),
+        #         },
+        #         history_length=0
+        # )
+
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
+
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2),history_length=5)
+        projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05),history_length=5)
+        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01),history_length=5)
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5),history_length=5)
+        last_action = ObsTerm(func=mdp.last_action,history_length=5)
 
         #base_lin_vel = ObsTerm(func=mdp.base_lin_vel,noise=Unoise(n_min=-0.01, n_max=0.01))
         #base_z_pos = ObsTerm(func=mdp.base_pos_z, noise=Unoise(n_min=-0.2, n_max=0.2))
 
         gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
                                                             "offset": [0,.5],
-                                                            })
+                                                            },history_length=5)
 
 
         # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
@@ -245,7 +256,7 @@ class ObservationsCfg:
         #                                                     })
 
         def __post_init__(self):
-            self.history_length = 5
+            #self.history_length = 5
             self.enable_corruption = True
             self.concatenate_terms = True
 
@@ -257,24 +268,24 @@ class ObservationsCfg:
         """Observations for critic group."""
 
 
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
-        base_z_pos = ObsTerm(func=mdp.base_pos_z)
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2)
-        projected_gravity = ObsTerm(func=mdp.projected_gravity)
-        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel)
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05)
-        last_action = ObsTerm(func=mdp.last_action)
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel,history_length=5)
+        base_z_pos = ObsTerm(func=mdp.base_pos_z,history_length=5)
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2,history_length=5)
+        projected_gravity = ObsTerm(func=mdp.projected_gravity,history_length=5)
+        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,history_length=5)
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05,history_length=5)
+        last_action = ObsTerm(func=mdp.last_action,history_length=5)
         # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
         #                                                     "offset": [0,.5],
         #                                                     })
         gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
                                                             "offset": [0,.5],
-                                                            })
+                                                            },history_length=5)
 
 
-        def __post_init__(self):
-            self.history_length = 5
+       # def __post_init__(self):
+            #self.history_length = 5
 
     # privileged observations
     critic: CriticCfg = CriticCfg()
@@ -556,6 +567,7 @@ class TerminationsCfg:
 ##
 
 
+
 @configclass
 class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     # Scene settings
@@ -570,7 +582,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     terminations: TerminationsCfg = TerminationsCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
 
-    n_scan:int = 132 #not an observation dimension. Don't specify in obs group.
+    n_scan:int = 132
     n_priv:int = 3+3 +3 #is an obs dimension
     n_priv_latent:int = 4 + 1 + 12 +12 #not an obs dimension
     n_proprio:int = 3 + 2 + 3 + 4 + 36 + 5 #is an obs dimension

@@ -453,6 +453,9 @@ class OnPolicyRunnerCustom:
 
         #print(f"policy_cfg test: {self.policy_cfg}")
         ###########c##############
+
+        print("I am in on policy runner.")
+        print(f"n scan on actor critic: {self.env.cfg.n_scan}")
         if actor_critic_class_name == "ActorCriticRMA":
             actor_critic: ActorCriticRMA = actor_critic_class(obs = obs,
                                                               obs_groups = self.cfg["obs_groups"],

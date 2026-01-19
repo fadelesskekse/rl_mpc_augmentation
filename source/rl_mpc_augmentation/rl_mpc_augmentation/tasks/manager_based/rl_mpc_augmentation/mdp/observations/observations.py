@@ -92,3 +92,16 @@ def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
     data = sensor.data
     
     return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2]
+
+def test_1(env: ManagerBasedEnv) -> torch.Tensor:
+
+    test_1_val = torch.full((env.num_envs, 3), 6.9, device=env.device)
+
+    print(f"test-1_val{test_1_val}")
+    return test_1_val
+
+def test_2(env: ManagerBasedEnv) -> torch.Tensor:
+    test_2_val = torch.full((env.num_envs, 3), 4.2, device=env.device)
+
+    print(f"test-2_val{test_2_val}")
+    return test_2_val

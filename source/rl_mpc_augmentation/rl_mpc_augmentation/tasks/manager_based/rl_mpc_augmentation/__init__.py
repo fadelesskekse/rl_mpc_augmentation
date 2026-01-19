@@ -27,14 +27,18 @@ ENTRY_POINTS = [
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:PPORunnerCfgCustom",
         "play_env_cfg_entry_point": f"{__name__}.vision_rl_cfg:RobotPlayEnvCfg",
     },
-
-    
 ]
+
+ENV = [
+    "isaaclab.envs:ManagerBasedRLEnv",
+    #"isaaclab.envs:ManagerBasedRLEnv"
+    f"{__name__}.envs.manager_based_rl_env_custom:ManagerBasedRLEnv",
+      ]
 
 for i in range(len(TASK_IDS)):
     gym.register(
         id = TASK_IDS[i],
-        entry_point="isaaclab.envs:ManagerBasedRLEnv",
+        entry_point=ENV[i],
         disable_env_checker=True,
         kwargs=ENTRY_POINTS[i]
 
