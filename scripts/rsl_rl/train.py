@@ -92,7 +92,9 @@ from isaaclab.envs import (
 from isaaclab.utils.dict import print_dict
 from isaaclab.utils.io import dump_yaml
 
-from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper
+from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg#, RslRlVecEnvWrapper
+from vec_env_wrapper_custom import RslRlVecEnvWrapperCustom
+#from rl_mpc_augmentation.vec_env_wrapper_custom import RslRlVecEnvWrapperCustom
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path
@@ -195,7 +197,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
     # wrap around environment for rsl-rl
-    env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
+    env = RslRlVecEnvWrapperCustom(env, clip_actions=agent_cfg.clip_actions)
 
     #print(f"env cfg n_scan test in train: {env.cfg.n_scan}")
     #print(f"print agent dict: {agent_cfg.to_dict()}")

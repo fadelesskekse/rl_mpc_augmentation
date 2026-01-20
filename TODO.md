@@ -78,8 +78,6 @@
     - The num_actions passed to Actor is from env.num_actions, not a hard-coded/ported value from extreme parkour. The num_actions passed to Actor in extreme parkour is hard coded.
         - Need to make sure this works properly. 
 
- Next step is creating a custom PPO
-
  24. Blind rl tuning:
     - dropped ankle joint limit penalty weight from -1 to -.5
     - dropped gait_deviation weight from .25 to .1
@@ -91,10 +89,22 @@
     - changed arm deviation weight from -.13 to -.25
         - Weird nominal arm placements sometimes
 
-    - run tonight on 
-
     
- Next step is creating a custom PPO
+
+
+
+
+
+
+25. Run vision_rl_cfg without estimators and with regular algorithm. Make sure my new obs manager works and can train properly. 
+
+
+28. fix play issue confirm if 2026-01-19_2204-36/model_9400.py works
+    - This was trained with custom obs manager. 
+
+29. Now I need to do it for the mass
+
+
 
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED

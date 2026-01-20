@@ -225,15 +225,44 @@ class ObservationManagerCustom(ObservationManager):
                     if term_cfg.flatten_history_dim:
                         obs_dims = (obs_dims[0], np.prod(obs_dims[1:]))
 
-      
-                print(f"obs_dims 1: {obs_dims[1]}")
-                print(f" n_scan before rewrite{self._env.cfg.n_scan}")
-                print(f"obs_term_id {obs_term_id}")
+             
+                # print(f"obs_dims 1: {obs_dims[1]}")
+                # print(f" n_scan before rewrite{self._env.cfg.n_scan}")
+                # print(f"obs_term_id {obs_term_id}")
+                
                 if obs_term_id == 0 and group_name == "policy": 
+                    if term_name != "scan_dot":
+                        raise TypeError(f"I have the wrong obs term in the 0th obs group slot. I have {term_name} where it should be 'scan_dot' ")
+                    if self._env.cfg.n_scan != obs_dims[1]:
+                        raise ValueError("n_scan in the 0th obs group has changed to something not equal to env.cfg set val. Check obs group order")
                     self._env.cfg.n_scan = obs_dims[1]
-                    print(f" n_scan test{self._env.cfg.n_scan}")
+                    print(f"n_scan {obs_dims[1]}")
+                elif obs_term_id == 1 and group_name == "policy":
+                    if term_name != "base_lin_vel":
+                        raise TypeError(f"I have the wrong obs term in the 1st obs group slot. I have {term_name} where it should be 'base_lin_vel'")
+                    if self._env.cfg.n_priv != obs_dims[1]:
+                        raise ValueError("n_priv in the 1st obs group has changed to something not equal to env.cfg set val. Check obs group order")
+                    self._env.cfg.n_priv = obs_dims[1]
+                    print(f"priv {obs_dims[1]}")
+                elif obs_term_id == 2 and group_name == "policy":
+                    if term_name != "priv_latent":
+                        raise TypeError(f"I have the wrong obs term in the 1st obs group slot. I have {term_name} where it should be 'priv_latent'")
+                    if self._env.cfg.n_priv_latent != obs_dims[1]:
+                        raise ValueError("n_priv_latent in the 2nd obs group has changed to something not equal to env.cfg set val. Check obs group order")
+                    self._env.cfg.n_priv_latent = obs_dims[1]
+                    print(f"priv_latent {obs_dims[1]}")
+                
+
+
 
                 
+                """IMPORTANT:
+                    
+                    First obs should be scan_dot
+                    Second obs should be lin vel
+                    third obs should be priv_latent_pre_encode
+                    4th 
+                    """
 
 
                 self._group_obs_term_dim[group_name].append(obs_dims[1:])

@@ -121,7 +121,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
     # ),
     # )
 
-    # sensors
+    # # sensors
     scan_dot = RayCasterCfg(
     prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link",
     #offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
@@ -217,24 +217,18 @@ class ObservationsCfg:
         """
 
 
-        # test_1 = ObsTerm(func=mdp.test_1,
-        #                  scale =1,
-        #                  history_length=0 )
-        
-        # test_2 = ObsTerm(func=mdp.test_2,
-        #                  scale =1,
-        #                  history_length=0)
 
         # # observation terms (order preserved)
-        # scan_dot = ObsTerm(func=mdp.scan_dot, 
-        #         scale = .2,
-        #         params={
-        #             "sensor_cfg": SceneEntityCfg("scan_dot",),
-        #         },
-        #         history_length=0
-        # )
+        scan_dot = ObsTerm(func=mdp.scan_dot, 
+                scale = .2,
+                params={
+                    "sensor_cfg": SceneEntityCfg("scan_dot",),
+                },
+                history_length=0
+        )
 
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
+        priv_latent = ObsTerm(func=mdp.priv_latent)
 
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2),history_length=5)
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05),history_length=5)
@@ -309,6 +303,7 @@ class EventCfg:
             "dynamic_friction_range": (0.3, 1.0),
             "restitution_range": (0.0, 0.0),
             "num_buckets": 64,
+            "make_consistent":True,
         },
     )
 
@@ -323,6 +318,34 @@ class EventCfg:
             "operation": "add",
         },
     )
+
+    # change_base_com = EventTerm(
+    #     func=mdp.randomize_rigid_body_com,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+    #         "com_range": {"x": (-0.075, .075),
+    #                       "y": (-0.075, .075),
+    #                       "z": (-0.075, .075),}
+     
+    #     },
+    # )
+
+    change_gains = EventTerm(
+        func=mdp.randomize_actuator_gains,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+            "stiffness_distribution_params":(.9,1.1),
+            "damping_distribution_params": (.9,1.1),
+            "operation": "scale"
+        },
+    )
+
+ 
+ 
+
+
 
     # # reset
     # base_external_force_torque = EventTerm(
@@ -582,10 +605,10 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     terminations: TerminationsCfg = TerminationsCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
 
-    n_scan:int = 132
-    n_priv:int = 3+3 +3 #is an obs dimension
-    n_priv_latent:int = 4 + 1 + 12 +12 #not an obs dimension
-    n_proprio:int = 3 + 2 + 3 + 4 + 36 + 5 #is an obs dimension
+    n_scan:int = 126 #used for exeception raising on obsGroup order.
+    n_priv:int = 3 #used for exeception raising on obsGroup order.
+    n_priv_latent:int = 66 #used for exeception raising on obsGroup order.
+    n_proprio:int = 3 + 2 + 3 + 4 + 36 + 5
     history_len:int = 10
     num_critic_obs:int = n_scan + history_len*n_proprio + n_priv_latent + n_priv 
 

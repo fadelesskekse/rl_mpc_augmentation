@@ -14,12 +14,14 @@ from __future__ import annotations
 import torch
 from typing import TYPE_CHECKING
 
-from isaaclab.assets import RigidObject
+from isaaclab.assets import RigidObject, Articulation
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import RayCaster
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv, ManagerBasedEnv
+
+
 
 def gait_cycle_var(
     env: ManagerBasedRLEnv,
@@ -92,6 +94,56 @@ def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
     data = sensor.data
     
     return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2]
+
+def priv_latent(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    stiffness = asset.data.joint_stiffness[:, asset_cfg.joint_ids]
+    damping = asset.data.joint_damping[:, asset_cfg.joint_ids]
+
+    friction_left = asset.root_physx_view.get_material_properties()[:, 9:16]
+    friction_right = asset.root_physx_view.get_material_properties()[:, 16:23]
+
+    friction_left  = friction_left[:, :, :2]     # (num_envs, 7, 2)
+    friction_right = friction_right[:, :, :2]    # (num_envs, 7, 2)
+
+    left_avg_fric  = friction_left.mean(dim=1)     # (num_envs, 2)
+    right_avg_fric = friction_right.mean(dim=1)    # (num_envs, 2)
+
+    device = stiffness.device
+
+    left_avg_fric  = left_avg_fric.to(device)
+    right_avg_fric = right_avg_fric.to(device)
+
+    mass = asset.root_physx_view.get_masses()[:, 9].unsqueeze(-1).to(device)
+    com = asset.root_physx_view.get_coms()[:,9,:3].to(device)
+
+
+    #print(f"mass shape: {mass.shape}")
+    #print(f"com shape: {com.shape}")
+
+
+
+
+    # print(f"left fric {left_avg_fric}")
+    # print(f"right fric {right_avg_fric}")
+    
+    #print(f"stiffness in obs: {stiffness}")
+   # print(f"dampingin obs: {damping}")
+
+   # print(f"mass for torso: {mass}")
+   # print(f"com for torso {com}")
+
+
+    priv = torch.cat(
+    [stiffness, damping, left_avg_fric, right_avg_fric,mass,com],
+    dim=-1
+)
+
+   # print(f"shape of priv: {priv.shape}")
+
+    return priv
 
 def test_1(env: ManagerBasedEnv) -> torch.Tensor:
 
