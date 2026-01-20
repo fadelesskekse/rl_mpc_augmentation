@@ -102,10 +102,13 @@
 28. fix play issue confirm if 2026-01-19_2204-36/model_9400.py works
     - This was trained with custom obs manager. 
 
-29. Now I need to do it for the mass
+29. make sure num_actions and obs_groups are used appropriate in ActorCriticRMA
 
 
+30. Scale the individual new extreme parkour terms as needed
+    - E.G. stiffness gains are way high. 
 
+31. IF I WANT TO USE EMPIRICAL NORMAILZATION, I WILL NEED TO EDIT HOW I CHANGE NUM_ACTOR_OBS IN ACTORCRITICCUSTOM. FOR NOW IT DOES NOT FUNCTION
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED
 

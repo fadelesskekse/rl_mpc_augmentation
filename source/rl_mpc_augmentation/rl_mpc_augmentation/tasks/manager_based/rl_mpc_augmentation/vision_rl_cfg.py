@@ -204,6 +204,7 @@ class ActionsCfg:
 class ObservationsCfg:
     """Observation specifications for the MDP."""
 
+
     @configclass
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
@@ -213,10 +214,10 @@ class ObservationsCfg:
         First obs should be scan_dot
         Second obs should be lin vel
         third obs should be priv_latent_pre_encode
-        4th 
+        4th should be hist proprio
         """
 
-
+        #######EXTREME PARKOUR OBS####################
 
         # # observation terms (order preserved)
         scan_dot = ObsTerm(func=mdp.scan_dot, 
@@ -227,18 +228,27 @@ class ObservationsCfg:
                 history_length=0
         )
 
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
-        priv_latent = ObsTerm(func=mdp.priv_latent)
+
+
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
+        
+        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0)
+        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0)
+        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass, history_length=0)
+        priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0)
+        priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0)
+
+        #priv_latent = ObsTerm(func=mdp.priv_latent, history_length=0)
+
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01),history_length=10) #updated in post init 
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5),history_length=10)
+
+        ########END EXTREME PARKOUS OBS#################
 
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2),history_length=5)
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05),history_length=5)
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01),history_length=5)
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5),history_length=5)
         last_action = ObsTerm(func=mdp.last_action,history_length=5)
-
-        #base_lin_vel = ObsTerm(func=mdp.base_lin_vel,noise=Unoise(n_min=-0.01, n_max=0.01))
-        #base_z_pos = ObsTerm(func=mdp.base_pos_z, noise=Unoise(n_min=-0.2, n_max=0.2))
 
         gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
                                                             "offset": [0,.5],
@@ -261,14 +271,34 @@ class ObservationsCfg:
     class CriticCfg(ObsGroup):
         """Observations for critic group."""
 
+        #######EXTREME PARKOUR OBS####################
 
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel,history_length=5)
-        base_z_pos = ObsTerm(func=mdp.base_pos_z,history_length=5)
+        # # observation terms (order preserved)
+        scan_dot = ObsTerm(func=mdp.scan_dot, 
+                scale = .2,
+                params={
+                    "sensor_cfg": SceneEntityCfg("scan_dot",),
+                },
+                history_length=0
+        )
+
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
+        #priv_latent = ObsTerm(func=mdp.priv_latent, history_length=0)
+        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1)
+        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1)
+        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass, history_length=0,scale=1)
+        priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0,scale=1)
+        priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0,scale=1)
+
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,history_length=10)
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05,history_length=10)
+
+        ########END EXTREME PARKOUS OBS#################
+
+        
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2,history_length=5)
         projected_gravity = ObsTerm(func=mdp.projected_gravity,history_length=5)
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,history_length=5)
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05,history_length=5)
         last_action = ObsTerm(func=mdp.last_action,history_length=5)
         # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
         #                                                     "offset": [0,.5],
@@ -607,15 +637,31 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
 
     n_scan:int = 126 #used for exeception raising on obsGroup order.
     n_priv:int = 3 #used for exeception raising on obsGroup order.
-    n_priv_latent:int = 66 #used for exeception raising on obsGroup order.
-    n_proprio:int = 3 + 2 + 3 + 4 + 36 + 5
+
+    n_priv_latent_gains_stiffness = 29
+    n_priv_latent_gains_damping = 29
+    n_priv_latent_mass = 1
+    n_priv_latent_com = 3
+    n_priv_latent_friction = 4
+
+    n_priv_latent:int = n_priv_latent_gains_stiffness +  n_priv_latent_gains_damping + n_priv_latent_mass + n_priv_latent_com + n_priv_latent_friction#66. used for exeception raising on obsGroup order.
+    n_proprio:int = 29 + 29
     history_len:int = 10
-    num_critic_obs:int = n_scan + history_len*n_proprio + n_priv_latent + n_priv 
+    history_len_for_regular_proprio_actor:int = 5
+
+    #critic observations take in raw priv info and raw n_scan
+    num_critic_obs:int = n_scan + (history_len+1)*n_proprio + n_priv_latent + n_priv 
 
     # Post initialization
     def __post_init__(self) -> None:
         """Post initialization."""
         # general settings
+
+        # self.observations.policy.joint_pos_rel.history_length=self.history_len
+        # self.observations.policy.joint_vel_rel.history_length=self.history_len
+        # self.observations.critic.joint_pos_rel.history_length=self.history_len
+        # self.observations.critic.joint_vel_rel.history_length=self.history_len
+
         self.decimation = 4
         self.episode_length_s = 20.0
         # viewer settings

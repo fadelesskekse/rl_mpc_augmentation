@@ -60,6 +60,7 @@ class StateHistoryEncoder(nn.Module):
     
 class Actor(nn.Module):
     def __init__(self,
+                 num_obs,
                  num_prop, 
                  num_scan, 
                  num_actions, 
@@ -75,6 +76,7 @@ class Actor(nn.Module):
         super().__init__()
         # prop -> scan -> priv_explicit -> priv_latent -> hist
         # actor input: prop -> scan -> priv_explicit -> latent
+        self.num_obs = num_obs
         self.num_prop = num_prop
         self.num_scan = num_scan
         self.num_hist = num_hist
@@ -92,9 +94,13 @@ class Actor(nn.Module):
                         priv_encoder_layers.append(activation)
                     self.priv_encoder = nn.Sequential(*priv_encoder_layers)
                     priv_encoder_output_dim = priv_encoder_dims[-1]
+
+                    self.num_obs += priv_encoder_output_dim #dont add this twice in the historyencoder. 
         else:
             self.priv_encoder = nn.Identity()
             priv_encoder_output_dim = num_priv_latent
+
+            self.num_obs += priv_encoder_output_dim #dont add this twice in the historyencoder. 
 
         self.history_encoder = StateHistoryEncoder(activation, num_prop, num_hist, priv_encoder_output_dim)
 
@@ -111,16 +117,27 @@ class Actor(nn.Module):
                     scan_encoder.append(activation)
             self.scan_encoder = nn.Sequential(*scan_encoder)
             self.scan_encoder_output_dim = scan_encoder_dims[-1]
+
+            self.num_obs += self.scan_encoder_output_dim
+            
         else:
             self.scan_encoder = nn.Identity()
             self.scan_encoder_output_dim = num_scan
+            self.num_obs += self.scan_encoder_output_dim
         
         actor_layers = []
-        actor_layers.append(nn.Linear(num_prop+
-                                      self.scan_encoder_output_dim+
-                                      num_priv_explicit+
-                                      priv_encoder_output_dim, 
-                                      actor_hidden_dims[0]))
+        # actor_layers.append(nn.Linear(num_prop+ #actor_backbone only takes in a
+        #                               self.scan_encoder_output_dim+
+        #                               num_priv_explicit+
+        #                               priv_encoder_output_dim, 
+        #                               actor_hidden_dims[0]))
+
+        #Input num_obs should only have the values associated with any extra observations not related to extreme_parkour. Before passing it in, we subtract
+        #away the raw scan encode dim, the priv_latent dim, and any extra proprioception history not used in the backbone. Afetr passing in, we add the 
+        #scan encode output and the priv/hist encoder output dim, thus the final num_obs as all proprioception history relevant to the backbone, 
+        #scan encodeoutput, priv/hist encode output, vel_estimated/raw data, and any other extra observations not related to extreme parkour. 
+        actor_layers.append(nn.Linear(self.num_obs,actor_hidden_dims[0]))
+        
         actor_layers.append(activation)
         for l in range(len(actor_hidden_dims)):
             if l == len(actor_hidden_dims) - 1:
@@ -201,6 +218,7 @@ class ActorCriticRMA(nn.Module):
         num_priv_latent, 
         num_priv_explicit,
         num_hist,
+        num_hist_for_actor_backbone_proprio,
 
         ########## custom end ############
 
@@ -239,9 +257,16 @@ class ActorCriticRMA(nn.Module):
             assert len(obs[obs_group].shape) == 2, "The ActorCritic module only supports 1D observations."
             num_actor_obs += obs[obs_group].shape[-1]
 
-            print(f"obs group first 3:  {obs[obs_group][:, :3]}")
-            print(f"obs group next 3:   {obs[obs_group][:, 3:6]}")
+        ############c############
+        if num_hist_for_actor_backbone_proprio > num_hist:
+            raise ValueError(f"'num_hist_for_actor_backbone_proprio' should be less than 'num_hist', it is of size {num_hist_for_actor_backbone_proprio}")
 
+        num_actor_obs -= (num_scan +  num_priv_latent + (num_hist - num_hist_for_actor_backbone_proprio) *num_prop)
+        #remove all obs dims from num_actor_obs that correspond to obs's that do not feed into the actor backbone.
+
+        ############cn##########
+        
+        print(f"Size of obs_group: {num_actor_obs}")
 
         num_critic_obs = 0
         for obs_group in obs_groups["critic"]:
@@ -256,7 +281,7 @@ class ActorCriticRMA(nn.Module):
         ####################c########################
         #Note: activation inside of original MLP for actor is handled within MLP init.
         #self.actor = MLP(num_actor_obs, num_actions, actor_hidden_dims, activation)
-        self.actor = Actor(num_prop, num_scan, num_actions, scan_encoder_dims, actor_hidden_dims, priv_encoder_dims, num_priv_latent, num_priv_explicit, num_hist, get_activation(activation), tanh_encoder_output=kwargs['tanh_encoder_output'])
+        self.actor = Actor(num_actor_obs,num_prop, num_scan, num_actions, scan_encoder_dims, actor_hidden_dims, priv_encoder_dims, num_priv_latent, num_priv_explicit, num_hist, get_activation(activation), tanh_encoder_output=kwargs['tanh_encoder_output'])
         ####################cn#######################
 
         # actor observation normalization
@@ -268,6 +293,7 @@ class ActorCriticRMA(nn.Module):
         print(f"Actor MLP: {self.actor}")
 
         # critic
+        print(f"num_critic_obs:{num_critic_obs}")
         self.critic = MLP(num_critic_obs, 1, critic_hidden_dims, activation)
         # critic observation normalization
         self.critic_obs_normalization = critic_obs_normalization

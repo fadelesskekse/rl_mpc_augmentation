@@ -119,6 +119,8 @@ class OnPolicyRunnerCustom:
                     actions = self.alg.act(obs)
                     # Step the environment
                     obs, rewards, dones, extras = self.env.step(actions.to(self.env.device))
+
+                    #print("policy obs:", obs["policy"])
                     # Move to device
                     obs, rewards, dones = (obs.to(self.device), rewards.to(self.device), dones.to(self.device))
                     # process the step
@@ -455,17 +457,19 @@ class OnPolicyRunnerCustom:
         ###########c##############
 
         print("I am in on policy runner.")
-        print(f"n scan on actor critic: {self.env.cfg.n_scan}")
+        print(f"n critic obs on actor critic: {self.env.cfg.n_scan}")
+        print(f"n scan on actor critic: {self.env.cfg.num_critic_obs}")
         if actor_critic_class_name == "ActorCriticRMA":
             actor_critic: ActorCriticRMA = actor_critic_class(obs = obs,
                                                               obs_groups = self.cfg["obs_groups"],
                                                               num_actions = self.env.num_actions,
                                                               num_prop = self.env.cfg.n_proprio,
-                                                              num_scan = self.env.cfg.n_scan,
+                                                              num_scan = self.env.cfg.n_scan, 
                                                               num_critic_extra = self.env.cfg.num_critic_obs,
-                                                              num_priv_latent = self.env.cfg.n_priv_latent,
-                                                              num_priv_explicit = self.env.cfg.n_priv,
+                                                              num_priv_latent = self.env.cfg.n_priv_latent, 
+                                                              num_priv_explicit = self.env.cfg.n_priv, 
                                                               num_hist = self.env.cfg.history_len,
+                                                              num_hist_for_actor_backbone_proprio = self.env.cfg.history_len_for_regular_proprio_actor,
                                                               **self.policy_cfg).to(self.device)
         else:
             actor_critic: ActorCritic | ActorCriticRecurrent = actor_critic_class(

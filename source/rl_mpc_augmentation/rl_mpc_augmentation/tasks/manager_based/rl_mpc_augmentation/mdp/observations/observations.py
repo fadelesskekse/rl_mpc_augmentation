@@ -145,6 +145,79 @@ def priv_latent(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg
 
     return priv
 
+# riv_latent_gains_stiffness = ObsTerm(func=mdp., history_length=0)
+#         priv_latent_gains_damping = ObsTerm(func=mdp., history_length=0)
+#         priv_latent_mass = ObsTerm(func=mdp., history_length=0)
+#         priv_latent_com = ObsTerm(func=mdp., history_length=0)
+#         priv_latent_friction= ObsTerm(func=mdp., history_length=0)
+
+
+def priv_latent_gains_stiffness(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    stiffness = asset.data.joint_stiffness[:, asset_cfg.joint_ids]
+
+    return stiffness
+    
+
+def priv_latent_gains_damping(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+
+    asset: Articulation = env.scene[asset_cfg.name]
+    
+    damping = asset.data.joint_damping[:, asset_cfg.joint_ids]
+
+    return damping
+
+
+
+def priv_latent_mass(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    device = env.device
+
+    mass = asset.root_physx_view.get_masses()[:, 9].unsqueeze(-1).to(device)
+
+    return mass
+
+def priv_latent_com(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    device = env.device
+
+    com = asset.root_physx_view.get_coms()[:,9,:3].to(device)
+
+    return com
+
+def priv_latent_friction(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    friction_left = asset.root_physx_view.get_material_properties()[:, 9:16]
+    friction_right = asset.root_physx_view.get_material_properties()[:, 16:23]
+
+    friction_left  = friction_left[:, :, :2]     # (num_envs, 7, 2)
+    friction_right = friction_right[:, :, :2]    # (num_envs, 7, 2)
+
+    left_avg_fric  = friction_left.mean(dim=1)     # (num_envs, 2)
+    right_avg_fric = friction_right.mean(dim=1)    # (num_envs, 2)
+
+    device = env.device
+
+    left_avg_fric  = left_avg_fric.to(device)
+    right_avg_fric = right_avg_fric.to(device)
+
+    priv = torch.cat(
+        [left_avg_fric,right_avg_fric],
+        dim=-1
+    )
+
+    return priv
+
+
+
 def test_1(env: ManagerBasedEnv) -> torch.Tensor:
 
     test_1_val = torch.full((env.num_envs, 3), 6.9, device=env.device)
