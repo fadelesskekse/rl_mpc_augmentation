@@ -80,8 +80,10 @@ from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 import rl_mpc_augmentation.tasks  # noqa: F401
-
+from vec_env_wrapper_custom import RslRlVecEnvWrapperCustom
 from unitree_rl_lab.utils.parser_cfg import parse_env_cfg
+
+from rl_mpc_augmentation.runners.on_policy_runner_custom import OnPolicyRunnerCustom
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -169,14 +171,19 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     
 
     # wrap around environment for rsl-rl
-    env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
+    #env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
+    
+    env = RslRlVecEnvWrapperCustom(env, clip_actions=agent_cfg.clip_actions)
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
     if agent_cfg.class_name == "OnPolicyRunner":
         runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    elif agent_cfg.class_name == "OnPolicyRunnerCustom":
+        runner = OnPolicyRunnerCustom(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
     elif agent_cfg.class_name == "DistillationRunner":
         runner = DistillationRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    
     else:
         raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
     runner.load(resume_path)

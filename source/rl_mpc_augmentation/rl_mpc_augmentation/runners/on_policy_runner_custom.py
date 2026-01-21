@@ -19,6 +19,8 @@ from rsl_rl.env import VecEnv
 from rsl_rl.modules import ActorCritic, ActorCriticRecurrent, resolve_rnd_config, resolve_symmetry_config
 from rsl_rl.utils import resolve_obs_groups, store_code_state
 
+from rl_mpc_augmentation.algorithms.ppo_custom import PPOCustom
+
 from ..modules import *
 #from ..modules.actor_critic_custom import ActorCriticRMA
 #from rl_mpc_augmentation.estimator.estimator import Estimator
@@ -30,15 +32,15 @@ class OnPolicyRunnerCustom:
         self.cfg = train_cfg
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
-        self.estimator_cfg = train_cfg["estimator"]
+       # self.estimator_cfg = train_cfg["estimator"]
         #self.depth_encoder_cfg = train_cfg["depth_encoder"]
         self.device = device
         self.env = env
 
         ###################c######################
-        self.estimator_cfg["num_prop"] = env.cfg.n_proprio
-        self.estimator_cfg["num_scan"] = env.cfg.n_scan
-        self.estimator_cfg["priv_states_dim"] = env.cfg.n_priv
+       # self.estimator_cfg["num_prop"] = env.cfg.n_proprio
+      #  self.estimator_cfg["num_scan"] = env.cfg.n_scan
+       # self.estimator_cfg["priv_states_dim"] = env.cfg.n_priv
 
         #print("n_scan in onPolicy workaroudn:", self.estimator_cfg["num_scan"])
         #print(f"train_cfg_dict: {train_cfg}")
@@ -60,7 +62,9 @@ class OnPolicyRunnerCustom:
         self.cfg["obs_groups"] = resolve_obs_groups(obs, self.cfg["obs_groups"], default_sets)
 
         # create the algorithm
-        self.alg: PPO = self._construct_algorithm(obs)
+        self.alg: PPO| PPOCustom = self._construct_algorithm(obs)
+
+       # self.learn = self.learn_RL if not self.if_depth else self.learn_vision
 
         # Decide whether to disable logging
         # We only log from the process with rank 0 (main process)
@@ -73,6 +77,8 @@ class OnPolicyRunnerCustom:
         self.tot_time = 0
         self.current_learning_iteration = 0
         self.git_status_repos = [rsl_rl.__file__]
+
+    # def learn_RL():
 
     def learn(self, num_learning_iterations: int, init_at_random_ep_len: bool = False):  # noqa: C901
         # initialize writer
@@ -112,11 +118,16 @@ class OnPolicyRunnerCustom:
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
             start = time.time()
+            hist_encoding = it % self.dagger_update_freq == 0
             # Rollout
             with torch.inference_mode():
                 for _ in range(self.num_steps_per_env):
                     # Sample actions
-                    actions = self.alg.act(obs)
+
+                    if isinstance(self.alg,PPO):
+                        actions = self.alg.act(obs)
+                    elif isinstance(self.alg,PPOCustom):
+                        actions = self.alg.act(obs,hist_encoding)
                     # Step the environment
                     obs, rewards, dones, extras = self.env.step(actions.to(self.env.device))
 
@@ -428,7 +439,7 @@ class OnPolicyRunnerCustom:
         # set device to the local rank
         torch.cuda.set_device(self.gpu_local_rank)
 
-    def _construct_algorithm(self, obs) -> PPO:
+    def _construct_algorithm(self, obs) -> PPO | PPOCustom:
         """Construct the actor-critic algorithm."""
         # resolve RND config
         self.alg_cfg = resolve_rnd_config(self.alg_cfg, obs, self.cfg["obs_groups"], self.env)
@@ -478,13 +489,29 @@ class OnPolicyRunnerCustom:
 
         #Added estimator
 
-        estimator = Estimator(input_dim=self.env.cfg.n_proprio, output_dim=self.env.cfg.n_priv, hidden_dims=self.estimator_cfg["hidden_dims"]).to(self.device)
+       # estimator = Estimator(input_dim=self.env.cfg.n_proprio, output_dim=self.env.cfg.n_priv, hidden_dims=self.estimator_cfg["hidden_dims"]).to(self.device)
 
+        self.if_depth = False# self.depth_encoder_cfg["if_depth"]
+
+        #Need to add depth encoder instantiation
         ############cn################
+        class_name = self.alg_cfg.pop("class_name")
 
         # initialize the algorithm
-        alg_class = eval(self.alg_cfg.pop("class_name"))
-        alg: PPO = alg_class(actor_critic, device=self.device, **self.alg_cfg, multi_gpu_cfg=self.multi_gpu_cfg)
+        alg_class = eval(class_name)
+
+        #alg: PPO= alg_class(actor_critic, device=self.device, **self.alg_cfg, multi_gpu_cfg=self.multi_gpu_cfg)
+        
+        if class_name == "PPO":
+            alg: PPO= alg_class(actor_critic, device=self.device, **self.alg_cfg, multi_gpu_cfg=self.multi_gpu_cfg)
+        elif class_name == "PPOCustom":
+            alg: PPOCustom = alg_class(actor_critic, 
+                                  estimator, self.estimator_cfg, 
+
+                                  device=self.device, **self.alg_cfg)
+            self.dagger_update_freq = self.alg_cfg["dagger_update_freq"]
+
+
 
         # initialize the storage
         alg.init_storage(

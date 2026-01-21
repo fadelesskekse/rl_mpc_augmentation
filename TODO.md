@@ -89,12 +89,6 @@
     - changed arm deviation weight from -.13 to -.25
         - Weird nominal arm placements sometimes
 
-    
-
-
-
-
-
 
 25. Run vision_rl_cfg without estimators and with regular algorithm. Make sure my new obs manager works and can train properly. 
 
@@ -102,13 +96,20 @@
 28. fix play issue confirm if 2026-01-19_2204-36/model_9400.py works
     - This was trained with custom obs manager. 
 
-29. make sure num_actions and obs_groups are used appropriate in ActorCriticRMA
-
 
 30. Scale the individual new extreme parkour terms as needed
     - E.G. stiffness gains are way high. 
 
 31. IF I WANT TO USE EMPIRICAL NORMAILZATION, I WILL NEED TO EDIT HOW I CHANGE NUM_ACTOR_OBS IN ACTORCRITICCUSTOM. FOR NOW IT DOES NOT FUNCTION
+
+32. Next Step is making the custom PPO algorithm. 
+
+33. Confirm scan dot output is what I want. Relative distance from the camera. (naturally in body frame)
+
+34. Need to update PPOCustom.Act for onPolicyrunner rollout (Next Step)
+
+- look at extreme parkour onPolicyRunner and update accordingly
+
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED
 

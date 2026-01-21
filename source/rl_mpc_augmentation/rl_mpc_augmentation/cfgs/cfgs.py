@@ -22,6 +22,7 @@ class RslRlPpoActorCriticCfgCustom(RslRlPpoActorCriticCfg):
 @configclass
 class RslRlPpoAlgorithmCfgCustom(RslRlPpoAlgorithmCfg):
     
+    
     # dagger params
     dagger_update_freq:int = MISSING
     priv_reg_coef_schedual: list = MISSING
