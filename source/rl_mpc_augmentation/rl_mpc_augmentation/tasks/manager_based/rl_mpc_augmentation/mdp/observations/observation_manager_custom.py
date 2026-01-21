@@ -23,10 +23,10 @@ from isaaclab.managers.manager_term_cfg import ObservationGroupCfg, ObservationT
 #from .manager_base import ManagerBase, ManagerTermBase
 #from .manager_term_cfg import ObservationGroupCfg, ObservationTermCfg
 from isaaclab.managers import ObservationManager
-print("made it here")
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
-    print("did ie neter here")
+
     #from isaaclab.managers import ObservationManager
 
 

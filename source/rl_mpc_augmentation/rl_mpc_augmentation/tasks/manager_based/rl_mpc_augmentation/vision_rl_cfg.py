@@ -122,27 +122,27 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
     # )
 
     # # sensors
-    scan_dot = RayCasterCfg(
-    prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link",
-    #offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-    ray_alignment="yaw",
+    # scan_dot = RayCasterCfg(
+    # prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link",
+    # #offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    # ray_alignment="yaw",
 
-    # pattern_cfg=patterns.PinholeCameraPatternCfg(
-    # focal_length=.193,
-    # horizontal_aperture=.384,
-    # vertical_aperture=.24,
-    # width=424,
-    # height=240,),
+    # # pattern_cfg=patterns.PinholeCameraPatternCfg(
+    # # focal_length=.193,
+    # # horizontal_aperture=.384,
+    # # vertical_aperture=.24,
+    # # width=424,
+    # # height=240,),
 
-    pattern_cfg=patterns.GridPatternCfg(
-        resolution=.196, #in meters, length then width
-        size=(1.625,2.6), #in meters,length then width
-    ),
+    # pattern_cfg=patterns.GridPatternCfg(
+    #     resolution=.196, #in meters, length then width
+    #     size=(1.625,2.6), #in meters,length then width
+    # ),
 
-    debug_vis=True,
-    update_period=1/60,
-    mesh_prim_paths=["/World/ground"],
-    )
+    # debug_vis=True,
+    # update_period=1/60,
+    # mesh_prim_paths=["/World/ground"],
+    # )
 
 @configclass
 class CurriculumCfg:
@@ -289,7 +289,7 @@ class ObservationsCfg:
         # priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass, history_length=0,scale=1)
         # priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0,scale=1)
         # priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0,scale=1)
-
+        #base_z_pos = ObsTerm(func=mdp.base_pos_z, history_length=5)
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,history_length=5)
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05,history_length=5)
 
@@ -361,16 +361,16 @@ class EventCfg:
     #     },
     # )
 
-    change_gains = EventTerm(
-        func=mdp.randomize_actuator_gains,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "stiffness_distribution_params":(.9,1.1),
-            "damping_distribution_params": (.9,1.1),
-            "operation": "scale"
-        },
-    )
+    # change_gains = EventTerm(
+    #     func=mdp.randomize_actuator_gains,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+    #         "stiffness_distribution_params":(.9,1.1),
+    #         "damping_distribution_params": (.9,1.1),
+    #         "operation": "scale"
+    #     },
+    # )
 
  
  
