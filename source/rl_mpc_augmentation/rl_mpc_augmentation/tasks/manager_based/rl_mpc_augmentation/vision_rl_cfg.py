@@ -197,7 +197,7 @@ class ActionsCfg:
         asset_name="robot",
         num_vars = 1,
         var_names = ["gait_cycle",],
-        clip = {"gait_cycle": (.5, 2)}
+        clip = {"gait_cycle": (.4, 2)}
         )
 
 @configclass
@@ -219,7 +219,7 @@ class ObservationsCfg:
 
         #######EXTREME PARKOUR OBS####################
 
-        # # observation terms (order preserved)
+        # # # observation terms (order preserved)
         # scan_dot = ObsTerm(func=mdp.scan_dot, 
         #         scale = .2,
         #         params={
@@ -230,26 +230,24 @@ class ObservationsCfg:
 
 
 
-       # base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
+        #base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
         
-       # priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0)
-        #priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0)
-       # priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass, history_length=0)
-       # priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0)
-        #priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0)
+        # priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0)
+        # priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0)
+        # priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass, history_length=0)
+        # priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0)
+        # priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0)
 
         #priv_latent = ObsTerm(func=mdp.priv_latent, history_length=0)
 
-        #joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01),history_length=5) #updated in post init 
-       # joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5),history_length=5)
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01),history_length=5) #updated in post init 
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5),history_length=5)
 
         ########END EXTREME PARKOUS OBS#################
 
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2),history_length=5)
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05),history_length=5)
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01),history_length=5) #updated in post init 
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5),history_length=5)
         last_action = ObsTerm(func=mdp.last_action,history_length=5)
 
         gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
@@ -291,9 +289,9 @@ class ObservationsCfg:
         # priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass, history_length=0,scale=1)
         # priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0,scale=1)
         # priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0,scale=1)
-        base_z_pos = ObsTerm(func=mdp.base_pos_z, history_length=5)
-       # joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,history_length=5)
-        #joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05,history_length=5)
+
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,history_length=5)
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05,history_length=5)
 
         ########END EXTREME PARKOUS OBS#################
 
@@ -301,8 +299,6 @@ class ObservationsCfg:
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2,history_length=5)
         projected_gravity = ObsTerm(func=mdp.projected_gravity,history_length=5)
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,history_length=5)
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05,history_length=5)
         last_action = ObsTerm(func=mdp.last_action,history_length=5)
         # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
         #                                                     "offset": [0,.5],
@@ -365,16 +361,16 @@ class EventCfg:
     #     },
     # )
 
-    # change_gains = EventTerm(
-    #     func=mdp.randomize_actuator_gains,
-    #     mode="startup",
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-    #         "stiffness_distribution_params":(.9,1.1),
-    #         "damping_distribution_params": (.9,1.1),
-    #         "operation": "scale"
-    #     },
-    # )
+    change_gains = EventTerm(
+        func=mdp.randomize_actuator_gains,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+            "stiffness_distribution_params":(.9,1.1),
+            "damping_distribution_params": (.9,1.1),
+            "operation": "scale"
+        },
+    )
 
  
  
@@ -473,13 +469,13 @@ class RewardsCfg:
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
 
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
-    #dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
+    dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
 
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
     gait_deviation = RewTerm(
         func=mdp.gait_deviation,
-        weight = -.005,
+        weight = .1,
         params={
             "nominal": .5
         }
@@ -489,7 +485,7 @@ class RewardsCfg:
     # Justification: Encourage robot to stay near nominal pose
     joint_deviation_arms = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.13,
+        weight=-0.25,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot",
@@ -521,7 +517,7 @@ class RewardsCfg:
 
     joint_deviation_ankle = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1.0,
+        weight=-.5,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_ankle_pitch_joint"])},
     )
 
@@ -650,7 +646,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
 
     n_priv_latent:int = n_priv_latent_gains_stiffness +  n_priv_latent_gains_damping + n_priv_latent_mass + n_priv_latent_com + n_priv_latent_friction#66. used for exeception raising on obsGroup order.
     n_proprio:int = 29 + 29
-    history_len:int = 5
+    history_len:int = 10
     history_len_for_regular_proprio_actor:int = 5
 
     #critic observations take in raw priv info and raw n_scan
