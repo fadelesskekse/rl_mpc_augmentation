@@ -14,17 +14,19 @@ from rsl_rl.modules import ActorCritic
 from rsl_rl.modules.rnd import RandomNetworkDistillation
 from rsl_rl.storage import RolloutStorage
 from rsl_rl.utils import string_to_callable
-
+from ..modules.actor_critic_custom import ActorCriticRMA
 
 class PPOCustom:
     """Proximal Policy Optimization algorithm (https://arxiv.org/abs/1707.06347)."""
 
-    policy: ActorCritic
+    policy: ActorCriticRMA
     """The actor critic module."""
 
     def __init__(
         self,
         policy,
+        estimator,
+        estimator_paras,
         num_learning_epochs=5,
         num_mini_batches=4,
         clip_param=0.2,
@@ -38,6 +40,8 @@ class PPOCustom:
         schedule="adaptive",
         desired_kl=0.01,
         device="cpu",
+        dagger_update_freq=20,
+        priv_reg_coef_schedual = [0, 0, 0],
         normalize_advantage_per_mini_batch=False,
         # RND parameters
         rnd_cfg: dict | None = None,
@@ -45,9 +49,9 @@ class PPOCustom:
         symmetry_cfg: dict | None = None,
         # Distributed training parameters
         multi_gpu_cfg: dict | None = None,
+        **kwargs,
     ):
-        
-        print("HIHIHIHIHIHI")
+       
         # device-related parameters
         self.device = device
         self.is_multi_gpu = multi_gpu_cfg is not None

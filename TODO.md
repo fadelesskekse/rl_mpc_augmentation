@@ -78,24 +78,6 @@
     - The num_actions passed to Actor is from env.num_actions, not a hard-coded/ported value from extreme parkour. The num_actions passed to Actor in extreme parkour is hard coded.
         - Need to make sure this works properly. 
 
- 24. Blind rl tuning:
-    - dropped ankle joint limit penalty weight from -1 to -.5
-    - dropped gait_deviation weight from .25 to .1
-    - changed z vel to reward positive z vel and penalize negative
-        - Goal is to improve upward stair climbing while retaining penalization of hopping and downward stair climbing. 
-        - made positive weight 2 and negative penalty 4
-    - Changed min gait cycle to .4
-    - Readded max velocity joint penalization.
-    - changed arm deviation weight from -.13 to -.25
-        - Weird nominal arm placements sometimes
-
-
-25. Run vision_rl_cfg without estimators and with regular algorithm. Make sure my new obs manager works and can train properly. 
-
-
-28. fix play issue confirm if 2026-01-19_2204-36/model_9400.py works
-    - This was trained with custom obs manager. 
-
 
 30. Scale the individual new extreme parkour terms as needed
     - E.G. stiffness gains are way high. 

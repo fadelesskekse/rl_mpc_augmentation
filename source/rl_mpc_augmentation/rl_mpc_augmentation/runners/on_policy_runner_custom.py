@@ -32,15 +32,15 @@ class OnPolicyRunnerCustom:
         self.cfg = train_cfg
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
-       # self.estimator_cfg = train_cfg["estimator"]
+        self.estimator_cfg = train_cfg["estimator"]
         #self.depth_encoder_cfg = train_cfg["depth_encoder"]
         self.device = device
         self.env = env
 
         ###################c######################
-       # self.estimator_cfg["num_prop"] = env.cfg.n_proprio
-      #  self.estimator_cfg["num_scan"] = env.cfg.n_scan
-       # self.estimator_cfg["priv_states_dim"] = env.cfg.n_priv
+        self.estimator_cfg["num_prop"] = env.cfg.n_proprio
+        self.estimator_cfg["num_scan"] = env.cfg.n_scan
+        self.estimator_cfg["priv_states_dim"] = env.cfg.n_priv
 
         #print("n_scan in onPolicy workaroudn:", self.estimator_cfg["num_scan"])
         #print(f"train_cfg_dict: {train_cfg}")
@@ -64,7 +64,7 @@ class OnPolicyRunnerCustom:
         # create the algorithm
         self.alg: PPO| PPOCustom = self._construct_algorithm(obs)
 
-       # self.learn = self.learn_RL if not self.if_depth else self.learn_vision
+        #self.learn = self.learn_RL if not self.if_depth else self.learn_vision
 
         # Decide whether to disable logging
         # We only log from the process with rank 0 (main process)
@@ -78,7 +78,7 @@ class OnPolicyRunnerCustom:
         self.current_learning_iteration = 0
         self.git_status_repos = [rsl_rl.__file__]
 
-    # def learn_RL():
+    #def learn_RL():
 
     def learn(self, num_learning_iterations: int, init_at_random_ep_len: bool = False):  # noqa: C901
         # initialize writer
@@ -118,7 +118,7 @@ class OnPolicyRunnerCustom:
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
             start = time.time()
-            hist_encoding = it % self.dagger_update_freq == 0
+           # hist_encoding = it % self.dagger_update_freq == 0
             # Rollout
             with torch.inference_mode():
                 for _ in range(self.num_steps_per_env):
@@ -489,7 +489,7 @@ class OnPolicyRunnerCustom:
 
         #Added estimator
 
-       # estimator = Estimator(input_dim=self.env.cfg.n_proprio, output_dim=self.env.cfg.n_priv, hidden_dims=self.estimator_cfg["hidden_dims"]).to(self.device)
+        estimator = Estimator(input_dim=self.env.cfg.n_proprio, output_dim=self.env.cfg.n_priv, hidden_dims=self.estimator_cfg["hidden_dims"]).to(self.device)
 
         self.if_depth = False# self.depth_encoder_cfg["if_depth"]
 
@@ -505,10 +505,10 @@ class OnPolicyRunnerCustom:
         if class_name == "PPO":
             alg: PPO= alg_class(actor_critic, device=self.device, **self.alg_cfg, multi_gpu_cfg=self.multi_gpu_cfg)
         elif class_name == "PPOCustom":
-            alg: PPOCustom = alg_class(actor_critic, 
-                                  estimator, self.estimator_cfg, 
+            alg: PPOCustom = alg_class(policy = actor_critic, 
+                                  estimator = estimator, estimator_paras = self.estimator_cfg, 
 
-                                  device=self.device, **self.alg_cfg)
+                                  device=self.device, **self.alg_cfg, multi_gpu_cfg=self.multi_gpu_cfg)
             self.dagger_update_freq = self.alg_cfg["dagger_update_freq"]
 
 
