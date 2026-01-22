@@ -645,8 +645,8 @@ class OnPolicyRunnerCustom:
 
         #Added estimator
 
-        estimator = Estimator(input_dim=self.env.cfg.n_proprio, output_dim=self.env.cfg.n_priv, hidden_dims=self.estimator_cfg["hidden_dims"]).to(self.device)
-
+        #estimator = Estimator(input_dim=self.env.cfg.n_proprio, output_dim=self.env.cfg.n_priv, hidden_dims=self.estimator_cfg["hidden_dims"]).to(self.device)
+        estimator = None
         #Need to add depth encoder instantiation
         ############cn################
         class_name = self.alg_cfg.pop("class_name")

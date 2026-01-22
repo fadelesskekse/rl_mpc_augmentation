@@ -135,8 +135,9 @@ class PPOCustom:
         self.num_priv_latent = estimator_paras["num_priv_latent"]
         self.history_len = estimator_paras["history_len"]
         
-        self.estimator_optimizer = optim.Adam(self.estimator.parameters(), lr=estimator_paras["learning_rate"])
-        self.train_with_estimated_states = estimator_paras["train_with_estimated_states"]
+       # self.estimator_optimizer = optim.Adam(self.estimator.parameters(), lr=estimator_paras["learning_rate"])
+        #self.train_with_estimated_states = estimator_paras["train_with_estimated_states"]
+        self.train_with_estimated_states = False
 
 
 
@@ -171,6 +172,9 @@ class PPOCustom:
             self.transition.hidden_states = self.policy.get_hidden_states()
         # compute the actions and values
        # print("I am taking actions during rollouts")
+
+       
+
         if self.train_with_estimated_states:
             obs_est = obs.clone()
 
@@ -374,21 +378,21 @@ class PPOCustom:
             priv_reg_coef = priv_reg_stage * (self.priv_reg_coef_schedual[1] - self.priv_reg_coef_schedual[0]) + self.priv_reg_coef_schedual[0]
             #coefficient goes from 0 to .1
 
-            # Estimator
-            #priv_states_predicted = self.estimator(obs_batch[:, :self.num_prop])  # obs in batch is with true priv_states
-            base = self.num_scan + self.priv_states_dim + self.num_priv_latent
-            half_prop = self.num_prop // 2
-            hist_offset = (self.history_len - 1) * half_prop
-            part1 = actor_obs[:, base + hist_offset: base + hist_offset+ half_prop]
-            part2 = actor_obs[:, base + self.history_len*half_prop + hist_offset : base + self.history_len*half_prop + hist_offset + half_prop]
-            estimator_input = torch.cat([part1, part2], dim=1)
-            priv_states_predicted = self.estimator(estimator_input) 
-            estimator_loss = (priv_states_predicted - actor_obs[:, self.num_scan: self.num_scan + self.priv_states_dim]).pow(2).mean()
-            #estimator_loss = (priv_states_predicted - obs_batch[:, self.num_prop+self.num_scan:self.num_prop+self.num_scan+self.priv_states_dim]).pow(2).mean()
-            self.estimator_optimizer.zero_grad()
-            estimator_loss.backward()
-            nn.utils.clip_grad_norm_(self.estimator.parameters(), self.max_grad_norm)
-            self.estimator_optimizer.step()
+            # # Estimator
+            # #priv_states_predicted = self.estimator(obs_batch[:, :self.num_prop])  # obs in batch is with true priv_states
+            # base = self.num_scan + self.priv_states_dim + self.num_priv_latent
+            # half_prop = self.num_prop // 2
+            # hist_offset = (self.history_len - 1) * half_prop
+            # part1 = actor_obs[:, base + hist_offset: base + hist_offset+ half_prop]
+            # part2 = actor_obs[:, base + self.history_len*half_prop + hist_offset : base + self.history_len*half_prop + hist_offset + half_prop]
+            # estimator_input = torch.cat([part1, part2], dim=1)
+            # priv_states_predicted = self.estimator(estimator_input) 
+            # estimator_loss = (priv_states_predicted - actor_obs[:, self.num_scan: self.num_scan + self.priv_states_dim]).pow(2).mean()
+            # #estimator_loss = (priv_states_predicted - obs_batch[:, self.num_prop+self.num_scan:self.num_prop+self.num_scan+self.priv_states_dim]).pow(2).mean()
+            # self.estimator_optimizer.zero_grad()
+            # estimator_loss.backward()
+            # nn.utils.clip_grad_norm_(self.estimator.parameters(), self.max_grad_norm)
+            # self.estimator_optimizer.step()
 
 
 
