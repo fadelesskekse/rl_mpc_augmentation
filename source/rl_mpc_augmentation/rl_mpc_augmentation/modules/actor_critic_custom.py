@@ -162,6 +162,7 @@ class Actor(nn.Module):
 
     def forward(self, obs, hist_encoding: bool, eval=False, scandots_latent=None):
         if not eval:
+           # print(f"obs shape passed to actor forward: {obs.shape}")
             if self.if_scan_encode: #Do we want to encode the scan dots? 
                 #print(f"obs in forward actor pass: {obs}")
                 #obs_scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
@@ -204,12 +205,17 @@ class Actor(nn.Module):
 
             obs_priv_explicit = obs[:,self.num_scan: self.num_scan + self.num_priv_explicit]
 
+           # print(f"obs priv explicit in actor forward: {obs_priv_explicit}")
+
             if obs_priv_explicit.shape[1] != self.num_priv_explicit:
                 raise ValueError(f"obs_priv_explicit should be of size {self.num_priv_explicit}, but it of size {obs_priv_explicit.shape[1]}")
             
+           # print(f"hist_encoding: {hist_encoding}")
             if hist_encoding:
                 latent = self.infer_hist_latent(obs)
             else:
+               # print("We are using priv_latent")
+              #  print(f"shape of obs passed {obs.shape}")
                 latent = self.infer_priv_latent(obs)
 
             #print(f"size of latent: {latent.size}")
@@ -229,6 +235,8 @@ class Actor(nn.Module):
 
             actor_backbone_prop_vel = obs[:,base + half_prop*self.num_hist + hist_offset: base + half_prop*self.num_hist + hist_offset +half_prop*self.num_actor_backbone_prop_hist]
 
+          #  print(f"size of actor_pos_prop_back: {actor_backbone_prop_pos.shape[1]}")
+           # print(f"size of actor_vel_prop_back: {actor_backbone_prop_vel.shape[1]}")
 
             if actor_backbone_prop_pos.shape[1] != self.num_actor_backbone_prop_hist*half_prop or actor_backbone_prop_vel.shape[1] != self.num_actor_backbone_prop_hist*half_prop:
                 
@@ -278,11 +286,12 @@ class Actor(nn.Module):
     def infer_priv_latent(self, obs):
 
         #priv = obs[:, self.num_prop + self.num_scan + self.num_priv_explicit: self.num_prop + self.num_scan + self.num_priv_explicit + self.num_priv_latent]
-       
+       # print(f"obs shape: {obs.shape}")
+        #print(f"obs: {obs}")
 
         priv = obs[:,self.num_scan + self.num_priv_explicit: self.num_scan + self.num_priv_explicit + self.num_priv_latent]
 
-       # print(f"priv: {priv}")
+        #print(f"priv: {priv}")
         return self.priv_encoder(priv)
     
     def infer_hist_latent(self, obs):
@@ -483,15 +492,20 @@ class ActorCriticRMA(nn.Module):
     def update_distribution(self, obs,hist_encoding):
         # compute mean
         mean = self.actor(obs,hist_encoding)
-        #print(f"Shape of obs passed ot update distirbution: {obs.shape}")
-       # print(f"Shape of output of forward MLP pass {mean.shape}")
+       # print(f"Shape of obs passed ot update distirbution: {obs.shape}")
+        print(f"Shape of output of forward MLP pass {mean.shape}")
         # compute standard deviation
 
        # print(f"Shape of self.std: {self.std.shape}")
         if self.noise_std_type == "scalar":
             std = self.std.expand_as(mean)
         elif self.noise_std_type == "log":
+            print(f"self.log_std: {self.log_std}")
+            print(f"self.log_std shape: {self.log_std.shape}")
             std = torch.exp(self.log_std).expand_as(mean)
+            print(f"std: {std}")
+            print(f"std shape: {std.shape}")
+
         else:
             raise ValueError(f"Unknown standard deviation type: {self.noise_std_type}. Should be 'scalar' or 'log'")
         # create distribution

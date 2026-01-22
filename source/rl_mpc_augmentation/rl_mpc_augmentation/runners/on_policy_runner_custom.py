@@ -189,6 +189,10 @@ class OnPolicyRunnerCustom:
 
             # update policy
             loss_dict = self.alg.update()
+            if hist_encoding:
+                print("Updating dagger...")
+                mean_hist_latent_loss = self.alg.update_dagger()
+                
 
             stop = time.time()
             learn_time = stop - start
@@ -320,6 +324,7 @@ class OnPolicyRunnerCustom:
 
             # update policy
             loss_dict = self.alg.update()
+            
 
             stop = time.time()
             learn_time = stop - start
@@ -389,6 +394,14 @@ class OnPolicyRunnerCustom:
         # -- Losses
         for key, value in locs["loss_dict"].items():
             self.writer.add_scalar(f"Loss/{key}", value, locs["it"])
+
+       # print(f"mean_hist: {locs['mean_hist_latent_loss']}")
+        self.writer.add_scalar(f"Loss/hist_latent_loss", locs['mean_hist_latent_loss'], locs["it"])
+
+        #for key, value in locs["mean_hist_latent_loss"].items():
+            #self.writer.add_scalar(f"Loss/{key}", value, locs["it"])
+
+        
         self.writer.add_scalar("Loss/learning_rate", self.alg.learning_rate, locs["it"])
 
         # -- Policy

@@ -202,11 +202,18 @@ class PPOCustom:
 
             #print(f"estimator_output shape: {priv_states_estimated.shape}")
 
+            #print(f"current velocity reading in ppo custom: {actor_obs[:, self.num_scan: self.num_scan + self.priv_states_dim]}")
+
          
             actor_obs[:, self.num_scan: self.num_scan + self.priv_states_dim] = priv_states_estimated
 
+            #print(f"velocity reading in ppo custom after estimated updated: {actor_obs[:, self.num_scan: self.num_scan + self.priv_states_dim]}")
+
+
             obs_est["policy"] = actor_obs
 
+           # print("Rollout acting")
+            #print(f"obs size in rollout act: {obs_est.shape}")
             self.transition.actions = self.policy.act(obs_est, hist_encoding).detach()
 
             #Note: In current RSL_RL, we have 'policy' and 'critic' keys in obs when its passed to PPO.act. When we grab the proprio for the estimated
@@ -262,10 +269,16 @@ class PPOCustom:
             last_values, self.gamma, self.lam, normalize_advantage=not self.normalize_advantage_per_mini_batch
         )
 
+    def update_counter(self):
+        self.counter += 1
+
     def update(self):  # noqa: C901
         mean_value_loss = 0
         mean_surrogate_loss = 0
         mean_entropy = 0
+        mean_estimator_loss = 0
+        mean_priv_reg_loss = 0
+
         # -- RND loss
         if self.rnd:
             mean_rnd_loss = 0
@@ -337,6 +350,8 @@ class PPOCustom:
             # Note: we need to do this because we updated the policy with the new parameters
             # -- actor
            # print("I am updating")
+           
+           # print("calling policy act which will not call infer_priv_latent.")
             self.policy.act(obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
             actions_log_prob_batch = self.policy.get_actions_log_prob(actions_batch)
             # -- critic
@@ -346,6 +361,36 @@ class PPOCustom:
             mu_batch = self.policy.action_mean[:original_batch_size]
             sigma_batch = self.policy.action_std[:original_batch_size]
             entropy_batch = self.policy.entropy[:original_batch_size]
+
+            actor_obs = self.policy.get_actor_obs(obs_batch)
+            # Adaptation module update
+          #  print("directly calling infer priv_latent in ppo update")
+           # print(f"size of obs_batch passed to direct call of infer priv latent: {actor_obs.shape}")
+            priv_latent_batch = self.policy.actor.infer_priv_latent(actor_obs) #this call isn't working
+            with torch.inference_mode():
+                hist_latent_batch = self.policy.actor.infer_hist_latent(actor_obs)
+            priv_reg_loss = (priv_latent_batch - hist_latent_batch.detach()).norm(p=2, dim=1).mean()
+            priv_reg_stage = min(max((self.counter - self.priv_reg_coef_schedual[2]), 0) / self.priv_reg_coef_schedual[3], 1)
+            priv_reg_coef = priv_reg_stage * (self.priv_reg_coef_schedual[1] - self.priv_reg_coef_schedual[0]) + self.priv_reg_coef_schedual[0]
+            #coefficient goes from 0 to .1
+
+            # Estimator
+            #priv_states_predicted = self.estimator(obs_batch[:, :self.num_prop])  # obs in batch is with true priv_states
+            base = self.num_scan + self.priv_states_dim + self.num_priv_latent
+            half_prop = self.num_prop // 2
+            hist_offset = (self.history_len - 1) * half_prop
+            part1 = actor_obs[:, base + hist_offset: base + hist_offset+ half_prop]
+            part2 = actor_obs[:, base + self.history_len*half_prop + hist_offset : base + self.history_len*half_prop + hist_offset + half_prop]
+            estimator_input = torch.cat([part1, part2], dim=1)
+            priv_states_predicted = self.estimator(estimator_input) 
+            estimator_loss = (priv_states_predicted - actor_obs[:, self.num_scan: self.num_scan + self.priv_states_dim]).pow(2).mean()
+            #estimator_loss = (priv_states_predicted - obs_batch[:, self.num_prop+self.num_scan:self.num_prop+self.num_scan+self.priv_states_dim]).pow(2).mean()
+            self.estimator_optimizer.zero_grad()
+            estimator_loss.backward()
+            nn.utils.clip_grad_norm_(self.estimator.parameters(), self.max_grad_norm)
+            self.estimator_optimizer.step()
+
+
 
             # KL
             if self.desired_kl is not None and self.schedule == "adaptive":
@@ -403,7 +448,11 @@ class PPOCustom:
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
-            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
+            #loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
+            loss = surrogate_loss + \
+                self.value_loss_coef * value_loss - \
+                self.entropy_coef * entropy_batch.mean() + \
+                priv_reg_coef*priv_reg_loss
 
             # Symmetry loss
             if self.symmetry:
@@ -466,6 +515,13 @@ class PPOCustom:
             if self.is_multi_gpu:
                 self.reduce_parameters()
 
+            
+            if self.policy.log_std.grad is not None:
+                grad = self.policy.log_std.grad
+                print("log_std.grad shape:", grad.shape)
+                print("log_std.grad:", grad)
+
+
             actor_grads = []
 
             for param in self.policy.actor.parameters():
@@ -478,6 +534,8 @@ class PPOCustom:
             else:
                 actor_grad_avg = 0.0
 
+            print(f"actor_grads:{actor_grads}")
+
             critic_grads = []
 
             for param in self.policy.critic.parameters():
@@ -489,6 +547,8 @@ class PPOCustom:
                 critic_grad_avg = g_critic.abs().mean().item()
             else:
                 critic_grad_avg = 0.0
+
+            print(f"critic_grads:{critic_grads}")
 
             grad_stats[f"grad_actor_avg_{grad_update_idx}"] = actor_grad_avg
             grad_stats[f"grad_critic_avg_{grad_update_idx}"] = critic_grad_avg
@@ -520,6 +580,10 @@ class PPOCustom:
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
         mean_entropy /= num_updates
+
+        mean_estimator_loss /= num_updates
+        mean_priv_reg_loss /= num_updates
+
         # -- For RND
         if mean_rnd_loss is not None:
             mean_rnd_loss /= num_updates
@@ -534,6 +598,8 @@ class PPOCustom:
             "value_function": mean_value_loss,
             "surrogate": mean_surrogate_loss,
             "entropy": mean_entropy,
+            "estimator": estimator_loss,
+            "priv_reg": mean_priv_reg_loss,
         }
         if self.rnd:
             loss_dict["rnd"] = mean_rnd_loss
@@ -542,8 +608,41 @@ class PPOCustom:
 
         # ---- Add gradient statistics ----
         loss_dict.update(grad_stats)
+        self.update_counter()
 
         return loss_dict
+
+
+    def update_dagger(self):
+        mean_hist_latent_loss = 0
+        if self.policy.is_recurrent:
+            generator = self.storage.reccurent_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
+        else:
+            generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
+        for obs_batch, actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, \
+            old_mu_batch, old_sigma_batch, hid_states_batch, masks_batch in generator:
+                
+                actor_obs = self.policy.get_actor_obs(obs_batch)
+   
+                with torch.inference_mode():
+                    self.policy.act(obs_batch, hist_encoding=True, masks=masks_batch, hidden_states=hid_states_batch[0])
+
+                # Adaptation module update
+                with torch.inference_mode():
+                    priv_latent_batch = self.policy.actor.infer_priv_latent(actor_obs)
+                hist_latent_batch = self.policy.actor.infer_hist_latent(actor_obs)
+                hist_latent_loss = (priv_latent_batch.detach() - hist_latent_batch).norm(p=2, dim=1).mean()
+                self.hist_encoder_optimizer.zero_grad()
+                hist_latent_loss.backward()
+                nn.utils.clip_grad_norm_(self.policy.actor.history_encoder.parameters(), self.max_grad_norm)
+                self.hist_encoder_optimizer.step()
+                
+                mean_hist_latent_loss += hist_latent_loss.item()
+        num_updates = self.num_learning_epochs * self.num_mini_batches
+        mean_hist_latent_loss /= num_updates
+        self.storage.clear()
+        self.update_counter()
+        return mean_hist_latent_loss
 
     """
     Helper functions
