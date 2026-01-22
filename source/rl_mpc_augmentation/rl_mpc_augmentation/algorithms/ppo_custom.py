@@ -602,7 +602,7 @@ class PPOCustom:
             "value_function": mean_value_loss,
             "surrogate": mean_surrogate_loss,
             "entropy": mean_entropy,
-            "estimator": estimator_loss,
+            #"estimator": estimator_loss,
             "priv_reg": mean_priv_reg_loss,
         }
         if self.rnd:

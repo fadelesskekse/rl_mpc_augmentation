@@ -117,7 +117,7 @@ class Actor(nn.Module):
 
         if self.if_scan_encode:
             scan_encoder = []
-            scan_encoder.append(nn.Linear(num_scan, scan_encoder_dims[0]))  #scan_encoder_dims = [128, 64, 32],
+            scan_encoder.append(nn.Linear(self.num_scan, scan_encoder_dims[0]))  #scan_encoder_dims = [128, 64, 32],
             scan_encoder.append(activation)
             for l in range(len(scan_encoder_dims) - 1):
                 if l == len(scan_encoder_dims) - 2:
@@ -133,8 +133,9 @@ class Actor(nn.Module):
             
         else:
             self.scan_encoder = nn.Identity()
-            self.scan_encoder_output_dim = num_scan
+            self.scan_encoder_output_dim = self.num_scan
             self.num_obs += self.scan_encoder_output_dim
+            print(f"scan_encoder_output_dim should be 0 for testing: {self.scan_encoder_output_dim}")
         
         actor_layers = []
         # actor_layers.append(nn.Linear(num_prop+ #actor_backbone only takes in a
@@ -200,6 +201,7 @@ class Actor(nn.Module):
             else:
                 #obs_prop_scan = obs[:, :self.num_prop + self.num_scan] #if we aren't encoding the scan, combine the raw scan obs with prop obs
                 obs_scan_actor_backbone_input = obs[:,:self.num_scan] #If we aren't encoding, just pass the raw obs
+                print(f"obs_scan_actor_backbone_input should be of size num_envs,0, it is: {obs_scan_actor_backbone_input.shape}")
             #obs_priv_explicit = obs[:, self.num_prop + self.num_scan:self.num_prop + self.num_scan + self.num_priv_explicit] #grabs the priviledged states
                                                                                                                             # which are from the estimator
 

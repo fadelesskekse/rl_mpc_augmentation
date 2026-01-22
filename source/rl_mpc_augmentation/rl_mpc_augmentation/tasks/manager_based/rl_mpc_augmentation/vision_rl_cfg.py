@@ -121,28 +121,28 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
     # ),
     # )
 
-    # sensors
-    scan_dot = RayCasterCfg(
-    prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link",
-    #offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-    ray_alignment="yaw",
+    # # sensors
+    # scan_dot = RayCasterCfg(
+    # prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link",
+    # #offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    # ray_alignment="yaw",
 
-    # pattern_cfg=patterns.PinholeCameraPatternCfg(
-    # focal_length=.193,
-    # horizontal_aperture=.384,
-    # vertical_aperture=.24,
-    # width=424,
-    # height=240,),
+    # # pattern_cfg=patterns.PinholeCameraPatternCfg(
+    # # focal_length=.193,
+    # # horizontal_aperture=.384,
+    # # vertical_aperture=.24,
+    # # width=424,
+    # # height=240,),
 
-    pattern_cfg=patterns.GridPatternCfg(
-        resolution=.196, #in meters, length then width
-        size=(1.625,2.6), #in meters,length then width
-    ),
+    # pattern_cfg=patterns.GridPatternCfg(
+    #     resolution=.196, #in meters, length then width
+    #     size=(1.625,2.6), #in meters,length then width
+    # ),
 
-    debug_vis=True,
-    update_period=1/60,
-    mesh_prim_paths=["/World/ground"],
-    )
+    # debug_vis=True,
+    # update_period=1/60,
+    # mesh_prim_paths=["/World/ground"],
+    # )
 
 @configclass
 class CurriculumCfg:
@@ -221,13 +221,13 @@ class ObservationsCfg:
         #######EXTREME PARKOUR OBS####################
 
         # # observation terms (order preserved)
-        scan_dot = ObsTerm(func=mdp.scan_dot, 
-                scale = .2,
-                params={
-                    "sensor_cfg": SceneEntityCfg("scan_dot",),
-                },
-                history_length=0
-        )
+        # scan_dot = ObsTerm(func=mdp.scan_dot, 
+        #         scale = .2,
+        #         params={
+        #             "sensor_cfg": SceneEntityCfg("scan_dot",),
+        #         },
+        #         history_length=0
+        # )
 
 
 
@@ -275,13 +275,13 @@ class ObservationsCfg:
         #######EXTREME PARKOUR OBS####################
 
         # # # observation terms (order preserved)
-        scan_dot = ObsTerm(func=mdp.scan_dot, 
-                scale = .2,
-                params={
-                    "sensor_cfg": SceneEntityCfg("scan_dot",),
-                },
-                history_length=0
-        )
+        # scan_dot = ObsTerm(func=mdp.scan_dot, 
+        #         scale = .2,
+        #         params={
+        #             "sensor_cfg": SceneEntityCfg("scan_dot",),
+        #         },
+        #         history_length=0
+        # )
 
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
        # priv_latent = ObsTerm(func=mdp.priv_latent, history_length=0)
@@ -636,7 +636,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     terminations: TerminationsCfg = TerminationsCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
 
-    n_scan:int = 126 #used for exeception raising on obsGroup order.
+    n_scan:int = 0 #used for exeception raising on obsGroup order.
     n_priv:int = 3 #used for exeception raising on obsGroup order.
 
     n_priv_latent_gains_stiffness = 29
