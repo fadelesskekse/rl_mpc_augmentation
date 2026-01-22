@@ -121,6 +121,25 @@ class PPOCustom:
         self.learning_rate = learning_rate
         self.normalize_advantage_per_mini_batch = normalize_advantage_per_mini_batch
 
+        #Adaptation
+        self.hist_encoder_optimizer = optim.Adam(self.policy.actor.history_encoder.parameters(), lr=learning_rate)
+        self.priv_reg_coef_schedual = priv_reg_coef_schedual
+        self.counter = 0
+        
+
+        #Estimator
+        self.estimator = estimator
+        self.priv_states_dim = estimator_paras["priv_states_dim"]
+        self.num_prop = estimator_paras["num_prop"] #size of one time steps worth of pos and vel joint data
+        self.num_scan = estimator_paras["num_scan"]
+        self.num_priv_latent = estimator_paras["num_priv_latent"]
+        self.history_len = estimator_paras["history_len"]
+        
+        self.estimator_optimizer = optim.Adam(self.estimator.parameters(), lr=estimator_paras["learning_rate"])
+        self.train_with_estimated_states = estimator_paras["train_with_estimated_states"]
+
+
+
     def init_storage(self, training_type, num_envs, num_transitions_per_env, obs, actions_shape):
         # create rollout storage
         self.storage = RolloutStorage(
@@ -132,17 +151,78 @@ class PPOCustom:
             self.device,
         )
 
-    def act(self, obs):
+    # def act(self, obs):
+    #     if self.policy.is_recurrent:
+    #         self.transition.hidden_states = self.policy.get_hidden_states()
+    #     # compute the actions and values
+    #    # print("policy actually selecting actions")
+    #     self.transition.actions = self.policy.act(obs).detach()
+    #     self.transition.values = self.policy.evaluate(obs).detach()
+    #     self.transition.actions_log_prob = self.policy.get_actions_log_prob(self.transition.actions).detach()
+    #     self.transition.action_mean = self.policy.action_mean.detach()
+    #     self.transition.action_sigma = self.policy.action_std.detach()
+    #     # need to record obs before env.step()
+    #     self.transition.observations = obs
+    #     return self.transition.actions
+
+    def act(self, obs,hist_encoding=False):
+
         if self.policy.is_recurrent:
             self.transition.hidden_states = self.policy.get_hidden_states()
         # compute the actions and values
-       # print("policy actually selecting actions")
-        self.transition.actions = self.policy.act(obs).detach()
+       # print("I am taking actions during rollouts")
+        if self.train_with_estimated_states:
+            obs_est = obs.clone()
+
+            actor_obs = obs_est.get("policy")
+  
+
+            base = self.num_scan + self.priv_states_dim + self.num_priv_latent
+            half_prop = self.num_prop // 2
+
+            hist_offset = (self.history_len - 1) * half_prop
+
+           # print(f"actor_obs size: {actor_obs.shape}")
+           # print(f"actor_obs: {actor_obs}")
+
+            part1 = actor_obs[:, base + hist_offset: base + hist_offset+ half_prop]
+
+           # print(f"size of part1:{part1.shape}")
+           # print(f"part1: {part1}")
+
+            part2 = actor_obs[:, base + self.history_len*half_prop + hist_offset : base + self.history_len*half_prop + hist_offset + half_prop]
+
+            #print(f"size of part2:{part2.shape}")
+            #print(f"part2: {part2}")
+
+            estimator_input = torch.cat([part1, part2], dim=1)
+            priv_states_estimated = self.estimator(estimator_input)
+
+           # print(f"estimator_input shape: {estimator_input.shape}")
+
+            #print(f"estimator_output shape: {priv_states_estimated.shape}")
+
+         
+            actor_obs[:, self.num_scan: self.num_scan + self.priv_states_dim] = priv_states_estimated
+
+            obs_est["policy"] = actor_obs
+
+            self.transition.actions = self.policy.act(obs_est, hist_encoding).detach()
+
+            #Note: In current RSL_RL, we have 'policy' and 'critic' keys in obs when its passed to PPO.act. When we grab the proprio for the estimated
+            #linear velocity calculation, we need to grab the policy version. 
+
+
+        else:
+            self.transition.actions = self.policy.act(obs, hist_encoding).detach()
+
+      
+        #self.transition.actions = self.policy.act(obs).detach()
         self.transition.values = self.policy.evaluate(obs).detach()
         self.transition.actions_log_prob = self.policy.get_actions_log_prob(self.transition.actions).detach()
         self.transition.action_mean = self.policy.action_mean.detach()
         self.transition.action_sigma = self.policy.action_std.detach()
-        # need to record obs before env.step()
+   
         self.transition.observations = obs
         return self.transition.actions
 
@@ -256,7 +336,7 @@ class PPOCustom:
             # Recompute actions log prob and entropy for current batch of transitions
             # Note: we need to do this because we updated the policy with the new parameters
             # -- actor
-
+           # print("I am updating")
             self.policy.act(obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
             actions_log_prob_batch = self.policy.get_actions_log_prob(actions_batch)
             # -- critic

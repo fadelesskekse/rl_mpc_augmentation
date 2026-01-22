@@ -93,7 +93,9 @@ def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
     #print(f"sensor data count: {sensor.num_instances}") #One scan_dot sensor
     data = sensor.data
     
+    out = sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2]
     return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2]
+    #return torch.ones_like(out)
 
 def priv_latent(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
 
@@ -158,6 +160,8 @@ def priv_latent_gains_stiffness(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg 
 
     stiffness = asset.data.joint_stiffness[:, asset_cfg.joint_ids]
 
+    #return torch.ones_like(stiffness)
+
     return stiffness
     
 
@@ -166,6 +170,7 @@ def priv_latent_gains_damping(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = 
     asset: Articulation = env.scene[asset_cfg.name]
     
     damping = asset.data.joint_damping[:, asset_cfg.joint_ids]
+    #return torch.ones_like(damping)
 
     return damping
 
@@ -179,6 +184,8 @@ def priv_latent_mass(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEnti
 
     mass = asset.root_physx_view.get_masses()[:, 9].unsqueeze(-1).to(device)
 
+    #return torch.ones_like(mass)
+
     return mass
 
 def priv_latent_com(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
@@ -188,6 +195,8 @@ def priv_latent_com(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntit
     device = env.device
 
     com = asset.root_physx_view.get_coms()[:,9,:3].to(device)
+
+   # return torch.ones_like(com)
 
     return com
 
@@ -213,6 +222,8 @@ def priv_latent_friction(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = Scene
         [left_avg_fric,right_avg_fric],
         dim=-1
     )
+
+    #return torch.ones_like(priv)
 
     return priv
 

@@ -41,6 +41,11 @@ class OnPolicyRunnerCustom:
         self.estimator_cfg["num_prop"] = env.cfg.n_proprio
         self.estimator_cfg["num_scan"] = env.cfg.n_scan
         self.estimator_cfg["priv_states_dim"] = env.cfg.n_priv
+        self.estimator_cfg["num_priv_latent"] = env.cfg.n_priv_latent
+        self.estimator_cfg["history_len"] = env.cfg.history_len
+
+        self.if_depth = False# self.depth_encoder_cfg["if_depth"]
+
 
         #print("n_scan in onPolicy workaroudn:", self.estimator_cfg["num_scan"])
         #print(f"train_cfg_dict: {train_cfg}")
@@ -64,7 +69,19 @@ class OnPolicyRunnerCustom:
         # create the algorithm
         self.alg: PPO| PPOCustom = self._construct_algorithm(obs)
 
-        #self.learn = self.learn_RL if not self.if_depth else self.learn_vision
+        if isinstance(self.alg, PPO):
+            self.learn = self.learn_base
+
+        elif isinstance(self.alg, PPOCustom):
+            if self.if_depth:
+                self.learn = self.learn_vision
+            else:
+                self.learn = self.learn_RL
+
+        else:
+            raise TypeError(f"Unsupported algorithm type: {type(self.alg)}")
+
+        #If if_depth = false 
 
         # Decide whether to disable logging
         # We only log from the process with rank 0 (main process)
@@ -78,9 +95,135 @@ class OnPolicyRunnerCustom:
         self.current_learning_iteration = 0
         self.git_status_repos = [rsl_rl.__file__]
 
-    #def learn_RL():
+    def learn_RL(self, num_learning_iterations: int, init_at_random_ep_len: bool = False):
 
-    def learn(self, num_learning_iterations: int, init_at_random_ep_len: bool = False):  # noqa: C901
+        self._prepare_logging_writer()
+
+        # randomize initial episode lengths (for exploration)
+        if init_at_random_ep_len:
+            self.env.episode_length_buf = torch.randint_like(
+                self.env.episode_length_buf, high=int(self.env.max_episode_length)
+            )
+
+        # start learning
+        obs = self.env.get_observations().to(self.device)
+        self.train_mode()  # switch to train mode (for dropout for example)
+
+        # Book keeping
+        ep_infos = []
+        rewbuffer = deque(maxlen=100)
+        lenbuffer = deque(maxlen=100)
+        cur_reward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
+        cur_episode_length = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
+
+        # create buffers for logging extrinsic and intrinsic rewards
+        if self.alg.rnd:
+            erewbuffer = deque(maxlen=100)
+            irewbuffer = deque(maxlen=100)
+            cur_ereward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
+            cur_ireward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
+
+        # Ensure all parameters are in-synced
+        if self.is_distributed:
+            print(f"Synchronizing parameters for rank {self.gpu_global_rank}...")
+            self.alg.broadcast_parameters()
+
+        # Start training
+        start_iter = self.current_learning_iteration
+        tot_iter = start_iter + num_learning_iterations
+        for it in range(start_iter, tot_iter):
+            start = time.time()
+            hist_encoding = it % self.dagger_update_freq == 0
+            # Rollout
+            with torch.inference_mode():
+                for _ in range(self.num_steps_per_env):
+                    # Sample actions
+                   
+                    actions = self.alg.act(obs,hist_encoding)
+                    # Step the environment
+                    obs, rewards, dones, extras = self.env.step(actions.to(self.env.device))
+
+                    #print("policy obs:", obs["policy"])
+                    # Move to device
+                    obs, rewards, dones = (obs.to(self.device), rewards.to(self.device), dones.to(self.device))
+                    # process the step
+                    self.alg.process_env_step(obs, rewards, dones, extras)
+                    # Extract intrinsic rewards (only for logging)
+                    intrinsic_rewards = self.alg.intrinsic_rewards if self.alg.rnd else None
+                    # book keeping
+                    if self.log_dir is not None:
+                        if "episode" in extras:
+                            ep_infos.append(extras["episode"])
+                            
+                        elif "log" in extras:
+                            ep_infos.append(extras["log"])
+                        # Update rewards
+                        if self.alg.rnd:
+                            cur_ereward_sum += rewards
+                            cur_ireward_sum += intrinsic_rewards  # type: ignore
+                            cur_reward_sum += rewards + intrinsic_rewards
+                        else:
+                            cur_reward_sum += rewards
+                        # Update episode length
+                        cur_episode_length += 1
+                        # Clear data for completed episodes
+                        # -- common
+                        new_ids = (dones > 0).nonzero(as_tuple=False)
+                        rewbuffer.extend(cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
+                        lenbuffer.extend(cur_episode_length[new_ids][:, 0].cpu().numpy().tolist())
+                        cur_reward_sum[new_ids] = 0
+                        cur_episode_length[new_ids] = 0
+                        # -- intrinsic and extrinsic rewards
+                        if self.alg.rnd:
+                            erewbuffer.extend(cur_ereward_sum[new_ids][:, 0].cpu().numpy().tolist())
+                            irewbuffer.extend(cur_ireward_sum[new_ids][:, 0].cpu().numpy().tolist())
+                            cur_ereward_sum[new_ids] = 0
+                            cur_ireward_sum[new_ids] = 0
+
+                stop = time.time()
+                collection_time = stop - start
+                start = stop
+
+                # compute returns
+                self.alg.compute_returns(obs)
+
+            # update policy
+            loss_dict = self.alg.update()
+
+            stop = time.time()
+            learn_time = stop - start
+            self.current_learning_iteration = it
+            # log info
+
+
+            if self.log_dir is not None and not self.disable_logs:
+                # Log information
+                
+                self.log(locals())
+                # Save model
+                if it % self.save_interval == 0:
+                    self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
+
+            # Clear episode infos
+            ep_infos.clear()
+            # Save code state
+            if it == start_iter and not self.disable_logs:
+                # obtain all the diff files
+                git_file_paths = store_code_state(self.log_dir, self.git_status_repos)
+                # if possible store them to wandb
+                if self.logger_type in ["wandb", "neptune"] and git_file_paths:
+                    for path in git_file_paths:
+                        self.writer.save_file(path)
+
+        # Save the final model after training
+        if self.log_dir is not None and not self.disable_logs:
+            self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration}.pt"))
+        
+
+    def learn_vision(self):
+        pass
+
+    def learn_base(self, num_learning_iterations: int, init_at_random_ep_len: bool = False):  # noqa: C901
         # initialize writer
         self._prepare_logging_writer()
 
@@ -118,7 +261,7 @@ class OnPolicyRunnerCustom:
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
             start = time.time()
-           # hist_encoding = it % self.dagger_update_freq == 0
+        
             # Rollout
             with torch.inference_mode():
                 for _ in range(self.num_steps_per_env):
@@ -468,8 +611,8 @@ class OnPolicyRunnerCustom:
         ###########c##############
 
         print("I am in on policy runner.")
-        print(f"n critic obs on actor critic: {self.env.cfg.n_scan}")
-        print(f"n scan on actor critic: {self.env.cfg.num_critic_obs}")
+        print(f"n scan on actor critic: {self.env.cfg.n_scan}")
+        print(f"n critic extra passed to actor critic in on policy: {self.env.cfg.num_critic_obs}")
         if actor_critic_class_name == "ActorCriticRMA":
             actor_critic: ActorCriticRMA = actor_critic_class(obs = obs,
                                                               obs_groups = self.cfg["obs_groups"],
@@ -490,8 +633,6 @@ class OnPolicyRunnerCustom:
         #Added estimator
 
         estimator = Estimator(input_dim=self.env.cfg.n_proprio, output_dim=self.env.cfg.n_priv, hidden_dims=self.estimator_cfg["hidden_dims"]).to(self.device)
-
-        self.if_depth = False# self.depth_encoder_cfg["if_depth"]
 
         #Need to add depth encoder instantiation
         ############cn################

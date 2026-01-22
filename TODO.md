@@ -92,6 +92,20 @@
 
 - look at extreme parkour onPolicyRunner and update accordingly
 
+35. Confirm that propriocept used in estimator is the latest obs's
+
+
+
+37. Confirm actor_backbone_prop_pos is correct along with vel
+        - After this, I need to update the update() functions to include loss for estimator and hist encoders etc. 
+
+
+
+38. Need to Get a metric down for comparison to see what helps and what doesn't
+38. I don't know if the hist_ proprio needs to be fed from oldest to newest or vice versa into the history encoder. 
+
+39. Setup way to view estimated velocity vs real one.
+
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED
 
@@ -113,3 +127,6 @@
     - Don't use it, its not needed. 
 
 
+35. ensure ActorCriticRMA.evaluate works properly
+    - called in PPOCustom.act, is passed the entire obs from rollout. 
+    - looks good to me, its just passed the entire critic obs stuff, which aligns with extreme parkour passing all of the raw stuff to it. 

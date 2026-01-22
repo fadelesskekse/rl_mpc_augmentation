@@ -13,6 +13,8 @@ from rsl_rl.networks import MLP, EmpiricalNormalization
 
 class StateHistoryEncoder(nn.Module):
     def __init__(self, activation_fn, input_size, tsteps, output_size, tanh_encoder_output=False):
+                       #activation, num_prop, num_hist, priv_encoder_output_dim)
+
         # self.device = device
         super(StateHistoryEncoder, self).__init__()
         self.activation_fn = activation_fn
@@ -53,13 +55,19 @@ class StateHistoryEncoder(nn.Module):
         T = self.tsteps
         # print("obs device", obs.device)
         # print("encoder device", next(self.encoder.parameters()).device)
-        projection = self.encoder(obs.reshape([nd * T, -1])) # do projection for n_proprio -> 32
+
+       # print(f"obs shape in hist encod forward: {obs.shape}")
+        projection = self.encoder(obs.reshape([nd * T, -1]))
+        #print(f"proj shape in hist encod forward: {projection.shape}")
         output = self.conv_layers(projection.reshape([nd, T, -1]).permute((0, 2, 1)))
         output = self.linear_output(output)
+
+       # print(f"hist encoder output shape: {output.shape}")
         return output
     
 class Actor(nn.Module):
     def __init__(self,
+                 num_actor_backbone_prop_hist,
                  num_obs,
                  num_prop, 
                  num_scan, 
@@ -76,6 +84,7 @@ class Actor(nn.Module):
         super().__init__()
         # prop -> scan -> priv_explicit -> priv_latent -> hist
         # actor input: prop -> scan -> priv_explicit -> latent
+        self.num_actor_backbone_prop_hist = num_actor_backbone_prop_hist
         self.num_obs = num_obs
         self.num_prop = num_prop
         self.num_scan = num_scan
@@ -95,6 +104,8 @@ class Actor(nn.Module):
                     self.priv_encoder = nn.Sequential(*priv_encoder_layers)
                     priv_encoder_output_dim = priv_encoder_dims[-1]
 
+                    print(f"priv_encoder Output dim: {priv_encoder_output_dim}")
+
                     self.num_obs += priv_encoder_output_dim #dont add this twice in the historyencoder. 
         else:
             self.priv_encoder = nn.Identity()
@@ -106,7 +117,7 @@ class Actor(nn.Module):
 
         if self.if_scan_encode:
             scan_encoder = []
-            scan_encoder.append(nn.Linear(num_scan, scan_encoder_dims[0]))
+            scan_encoder.append(nn.Linear(num_scan, scan_encoder_dims[0]))  #scan_encoder_dims = [128, 64, 32],
             scan_encoder.append(activation)
             for l in range(len(scan_encoder_dims) - 1):
                 if l == len(scan_encoder_dims) - 2:
@@ -152,50 +163,172 @@ class Actor(nn.Module):
     def forward(self, obs, hist_encoding: bool, eval=False, scandots_latent=None):
         if not eval:
             if self.if_scan_encode: #Do we want to encode the scan dots? 
-                obs_scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
+                #print(f"obs in forward actor pass: {obs}")
+                #obs_scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
+                obs_scan = obs[:,:self.num_scan]
+
+                #print(f"obs_scan: {obs_scan}")
+
+                #print(f"obs shape: {obs.shape}")
+
+               # print(f"obs_scan shape: {obs_scan.shape}")
+
+                if obs_scan.shape[1] != self.num_scan:
+                    raise ValueError(f"obs_scan should be the same size as num_scan, it is size {obs_scan.shape[1]}")
+                
                 if scandots_latent is None: #If we dont pass a scandot_latent in the Actors forward pass, we generate a new latent. 
                     scan_latent = self.scan_encoder(obs_scan)   
                 else:
                     scan_latent = scandots_latent
-                obs_prop_scan = torch.cat([obs[:, :self.num_prop], scan_latent], dim=1) #combines the scan latent and propropception observations into
+               # obs_prop_scan = torch.cat([obs[:, :self.num_prop], scan_latent], dim=1) #combines the scan latent and propropception observations into
                                                                                         #one observation
+                obs_scan_actor_backbone_input = scan_latent
+
+               # print(f"scan output dim: {self.scan_encoder_output_dim}")
+              #  print(f"obs_scan_actor_backbone_input: {obs_scan_actor_backbone_input.shape}")
+
+               
+                if obs_scan_actor_backbone_input.shape[0] != obs.shape[0]:
+                    raise ValueError(f"Error in scan encoder output shape. 0th element shoudl be of size num_envs, it is {obs_scan_actor_backbone_input.shape[0]}")
+                 
+
+                if obs_scan_actor_backbone_input.shape[1] != self.scan_encoder_output_dim:
+                    raise ValueError(f"Error in size for 'obs_scan_actor_backbone_input'. Is {obs_scan_actor_backbone_input.shape[1]}, should be {self.scan_encoder_output_dim}")
+                
+
             else:
-                obs_prop_scan = obs[:, :self.num_prop + self.num_scan] #if we aren't encoding the scan, combine the raw scan obs with prop obs
-            obs_priv_explicit = obs[:, self.num_prop + self.num_scan:self.num_prop + self.num_scan + self.num_priv_explicit] #grabs the priviledged states
+                #obs_prop_scan = obs[:, :self.num_prop + self.num_scan] #if we aren't encoding the scan, combine the raw scan obs with prop obs
+                obs_scan_actor_backbone_input = obs[:,:self.num_scan] #If we aren't encoding, just pass the raw obs
+            #obs_priv_explicit = obs[:, self.num_prop + self.num_scan:self.num_prop + self.num_scan + self.num_priv_explicit] #grabs the priviledged states
                                                                                                                             # which are from the estimator
+
+            obs_priv_explicit = obs[:,self.num_scan: self.num_scan + self.num_priv_explicit]
+
+            if obs_priv_explicit.shape[1] != self.num_priv_explicit:
+                raise ValueError(f"obs_priv_explicit should be of size {self.num_priv_explicit}, but it of size {obs_priv_explicit.shape[1]}")
+            
             if hist_encoding:
                 latent = self.infer_hist_latent(obs)
             else:
                 latent = self.infer_priv_latent(obs)
-            backbone_input = torch.cat([obs_prop_scan, obs_priv_explicit, latent], dim=1)
+
+            #print(f"size of latent: {latent.size}")
+
+            extreme_parkour_obs_base = self.num_scan + self.num_priv_explicit + self.num_priv_latent + self.num_hist*self.num_prop
+
+            non_exr_pkr_obs = obs[:,extreme_parkour_obs_base:]
+
+           # print(f"non extreme obs: {non_exr_pkr_obs}")
+
+            base = self.num_scan + self.num_priv_explicit + self.num_priv_latent
+            half_prop = self.num_prop // 2
+            hist_offset = (self.num_hist - self.num_actor_backbone_prop_hist) * half_prop
+
+            
+            actor_backbone_prop_pos = obs[:,base + hist_offset: base + hist_offset + half_prop*self.num_actor_backbone_prop_hist]
+
+            actor_backbone_prop_vel = obs[:,base + half_prop*self.num_hist + hist_offset: base + half_prop*self.num_hist + hist_offset +half_prop*self.num_actor_backbone_prop_hist]
+
+
+            if actor_backbone_prop_pos.shape[1] != self.num_actor_backbone_prop_hist*half_prop or actor_backbone_prop_vel.shape[1] != self.num_actor_backbone_prop_hist*half_prop:
+                
+                print(f"size of actor_pos_prop_back: {actor_backbone_prop_pos.shape[1]}")
+                print(f"size of actor_vel_prop_back: {actor_backbone_prop_vel.shape[1]}")
+                raise ValueError(f"Backbone pos or vel proprio history shape is off, it should be of size {self.num_actor_backbone_prop_hist*half_prop}")
+
+            
+            #backbone_input = torch.cat([obs_prop_scan, obs_priv_explicit, latent], dim=1)
+            backbone_input = torch.cat([obs_scan_actor_backbone_input, obs_priv_explicit, latent,actor_backbone_prop_pos,actor_backbone_prop_vel,non_exr_pkr_obs], dim=1)
+           
+            #print(f"shape of backbone input: {backbone_input.shape}")
+
+            if backbone_input.shape[1] != self.num_obs:
+                raise ValueError(f"backbone input should have shape of {self.num_obs} but it is of size {backbone_input}")
+
+
             backbone_output = self.actor_backbone(backbone_input)
             return backbone_output
+        
         else:
-            if self.if_scan_encode:
-                obs_scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
-                if scandots_latent is None:
-                    scan_latent = self.scan_encoder(obs_scan)   
-                else:
-                    scan_latent = scandots_latent
-                obs_prop_scan = torch.cat([obs[:, :self.num_prop], scan_latent], dim=1)
-            else:
-                obs_prop_scan = obs[:, :self.num_prop + self.num_scan]
-            obs_priv_explicit = obs[:, self.num_prop + self.num_scan:self.num_prop + self.num_scan + self.num_priv_explicit]
-            if hist_encoding:
-                latent = self.infer_hist_latent(obs)
-            else:
-                latent = self.infer_priv_latent(obs)
-            backbone_input = torch.cat([obs_prop_scan, obs_priv_explicit, latent], dim=1)
-            backbone_output = self.actor_backbone(backbone_input)
-            return backbone_output
+            raise ValueError("eval for whatever reason is True, I need to relook at code")
+        # else:
+        #     if self.if_scan_encode:
+        #         obs_scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
+        #         if scandots_latent is None:
+
+        #             scan_latent = self.scan_encoder(obs_scan)
+        #             print("I made it past scan encoder")   
+        #         else:
+        #             scan_latent = scandots_latent
+        #         obs_prop_scan = torch.cat([obs[:, :self.num_prop], scan_latent], dim=1)
+        #     else:
+        #         obs_prop_scan = obs[:, :self.num_prop + self.num_scan]
+        #     obs_priv_explicit = obs[:, self.num_prop + self.num_scan:self.num_prop + self.num_scan + self.num_priv_explicit]
+        #     if hist_encoding:
+        #         latent = self.infer_hist_latent(obs)
+        #     else:
+        #         latent = self.infer_priv_latent(obs)
+        #     #backbone_input = torch.cat([obs_prop_scan, obs_priv_explicit, latent], dim=1)
+        #     backbone_input = torch.cat([obs_scan_actor_backbone_input, obs_priv_explicit, latent], dim=1)
+
+        #     backbone_output = self.actor_backbone(backbone_input)
+
+        #     return backbone_output
     
     def infer_priv_latent(self, obs):
-        priv = obs[:, self.num_prop + self.num_scan + self.num_priv_explicit: self.num_prop + self.num_scan + self.num_priv_explicit + self.num_priv_latent]
+
+        #priv = obs[:, self.num_prop + self.num_scan + self.num_priv_explicit: self.num_prop + self.num_scan + self.num_priv_explicit + self.num_priv_latent]
+       
+
+        priv = obs[:,self.num_scan + self.num_priv_explicit: self.num_scan + self.num_priv_explicit + self.num_priv_latent]
+
+       # print(f"priv: {priv}")
         return self.priv_encoder(priv)
     
     def infer_hist_latent(self, obs):
-        hist = obs[:, -self.num_hist*self.num_prop:]
-        return self.history_encoder(hist.view(-1, self.num_hist, self.num_prop))
+        #hist = obs[:, -self.num_hist*self.num_prop:]
+        hist = obs[:,self.num_scan + self.num_priv_explicit + self.num_priv_latent: self.num_scan + self.num_priv_explicit + self.num_priv_latent + self.num_hist*self.num_prop]
+        
+       # print(f"hist: {hist}")
+       # print(f"proprio hist: {hist}")
+
+        num_envs = hist.shape[0]
+        H = self.num_hist           # e.g. 10
+        J = self.num_prop // 2      # 29 joints
+        P = self.num_prop           # 58 = 29 pos + 29 vel
+
+        # split into position and velocity blocks
+        pos = hist[:, :H * J]              # (num_envs, 290)
+        vel = hist[:, H * J : 2 * H * J]   # (num_envs, 290)
+
+        # reshape into (env, time, joints)
+        pos = pos.view(num_envs, H, J)     # (num_envs, 10, 29)
+        vel = vel.view(num_envs, H, J)     # (num_envs, 10, 29)
+
+        # interleave into (env, time, 58)
+        hist_interleaved = torch.cat([pos, vel], dim=2)  # (num_envs, 10, 58)
+
+        assert hist_interleaved.shape[1] == self.num_hist
+        assert hist_interleaved.shape[2] == self.num_prop
+
+        # check semantic alignment for env 0, t = 0
+        #print("t0 pos:", hist_interleaved[0, self.num_hist - 1, :J])
+       # print("t0 vel:", hist_interleaved[0, self.num_hist - 1, J:])
+
+        # check semantic alignment for env 0, t = 0
+       # print("t0_last pos:", hist_interleaved[0, 0, :J])
+       # print("t0_last vel:", hist_interleaved[0, 0, J:])
+
+       # print(f"after weaving hist: {hist_interleaved}")
+
+
+        #print(f"shape of new: {hist_interleaved.shape}" )
+
+        #print(f"shape of orignal: {hist.view(-1, self.num_hist, self.num_prop).shape}")
+
+        #return self.history_encoder(hist.view(-1, self.num_hist, self.num_prop))
+
+        return self.history_encoder(hist_interleaved)
     
     def infer_scandots_latent(self, obs):
         scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
@@ -273,6 +406,8 @@ class ActorCriticRMA(nn.Module):
             assert len(obs[obs_group].shape) == 2, "The ActorCritic module only supports 1D observations."
             num_critic_obs += obs[obs_group].shape[-1]
 
+        
+
         # actor
 
         #raise error if num_actor_obs for extreme_parkour obs's specified in Isaaclab is different than 
@@ -281,7 +416,17 @@ class ActorCriticRMA(nn.Module):
         ####################c########################
         #Note: activation inside of original MLP for actor is handled within MLP init.
         #self.actor = MLP(num_actor_obs, num_actions, actor_hidden_dims, activation)
-        self.actor = Actor(num_actor_obs,num_prop, num_scan, num_actions, scan_encoder_dims, actor_hidden_dims, priv_encoder_dims, num_priv_latent, num_priv_explicit, num_hist, get_activation(activation), tanh_encoder_output=kwargs['tanh_encoder_output'])
+        self.actor = Actor(num_hist_for_actor_backbone_proprio,
+                           num_actor_obs,num_prop, 
+                           num_scan, num_actions, 
+                           scan_encoder_dims, 
+                           actor_hidden_dims, 
+                           priv_encoder_dims, 
+                           num_priv_latent, 
+                           num_priv_explicit, 
+                           num_hist, 
+                           get_activation(activation), 
+                           tanh_encoder_output=kwargs['tanh_encoder_output'])
         ####################cn#######################
 
         # actor observation normalization
@@ -335,9 +480,9 @@ class ActorCriticRMA(nn.Module):
     def entropy(self):
         return self.distribution.entropy().sum(dim=-1)
 
-    def update_distribution(self, obs):
+    def update_distribution(self, obs,hist_encoding):
         # compute mean
-        mean = self.actor(obs)
+        mean = self.actor(obs,hist_encoding)
         #print(f"Shape of obs passed ot update distirbution: {obs.shape}")
        # print(f"Shape of output of forward MLP pass {mean.shape}")
         # compute standard deviation
@@ -373,10 +518,15 @@ class ActorCriticRMA(nn.Module):
         self.distribution = Normal(mean, std)
        
 
-    def act(self, obs, **kwargs):
+    # def act(self, obs, **kwargs):
+    #     obs = self.get_actor_obs(obs)
+    #     obs = self.actor_obs_normalizer(obs)
+    #     self.update_distribution(obs)
+    #     return self.distribution.sample()
+    def act(self, obs,hist_encoding=False, **kwargs):
         obs = self.get_actor_obs(obs)
         obs = self.actor_obs_normalizer(obs)
-        self.update_distribution(obs)
+        self.update_distribution(obs,hist_encoding)
         return self.distribution.sample()
 
     def act_inference(self, obs):
