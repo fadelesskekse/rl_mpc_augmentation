@@ -522,8 +522,8 @@ class PPOCustom:
             
             if self.policy.log_std.grad is not None:
                 grad = self.policy.log_std.grad
-                print("log_std.grad shape:", grad.shape)
-                print("log_std.grad:", grad)
+                #print("log_std.grad shape:", grad.shape)
+               # print("log_std.grad:", grad)
 
 
             actor_grads = []
@@ -538,7 +538,7 @@ class PPOCustom:
             else:
                 actor_grad_avg = 0.0
 
-            print(f"actor_grads:{actor_grads}")
+            #print(f"actor_grads:{actor_grads}")
 
             critic_grads = []
 
@@ -552,7 +552,7 @@ class PPOCustom:
             else:
                 critic_grad_avg = 0.0
 
-            print(f"critic_grads:{critic_grads}")
+           # print(f"critic_grads:{critic_grads}")
 
             grad_stats[f"grad_actor_avg_{grad_update_idx}"] = actor_grad_avg
             grad_stats[f"grad_critic_avg_{grad_update_idx}"] = critic_grad_avg
@@ -571,6 +571,7 @@ class PPOCustom:
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
             mean_entropy += entropy_batch.mean().item()
+            mean_priv_reg_loss += priv_reg_loss.item()
             # -- RND loss
             if mean_rnd_loss is not None:
                 mean_rnd_loss += rnd_loss.item()

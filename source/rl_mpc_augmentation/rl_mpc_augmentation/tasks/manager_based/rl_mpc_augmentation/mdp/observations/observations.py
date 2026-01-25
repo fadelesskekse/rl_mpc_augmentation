@@ -92,9 +92,26 @@ def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
 
     #print(f"sensor data count: {sensor.num_instances}") #One scan_dot sensor
     data = sensor.data
+
+    # (B, N, 3) - (B, 1, 3) -> (B, N, 3)
+    delta = sensor.data.ray_hits_w - sensor.data.pos_w[:, None, :]
+   # print(f"sensor pos world: {sensor.data.pos_w[:, None, :]}")
+   # print(f"sensor pos world shape: {sensor.data.pos_w[:, None, :].shape}")
+
+    #print(f"sensor.data.ray_hits_w : {sensor.data.ray_hits_w }")
+   # print(f"sensor.data.ray_hits_w shape : {sensor.data.ray_hits_w.shape}")
     
-    out = sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2]
-    return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2]
+
+
+
+
+
+  #  print(f"delta shape: {delta.shape}")
+
+    # Euclidean norm over x,y,z -> (B, N)
+    out = torch.norm(delta, dim=-1)
+    
+    return out
     #return torch.ones_like(out)
 
 def priv_latent(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
@@ -229,15 +246,3 @@ def priv_latent_friction(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = Scene
 
 
 
-def test_1(env: ManagerBasedEnv) -> torch.Tensor:
-
-    test_1_val = torch.full((env.num_envs, 3), 6.9, device=env.device)
-
-    print(f"test-1_val{test_1_val}")
-    return test_1_val
-
-def test_2(env: ManagerBasedEnv) -> torch.Tensor:
-    test_2_val = torch.full((env.num_envs, 3), 4.2, device=env.device)
-
-    print(f"test-2_val{test_2_val}")
-    return test_2_val

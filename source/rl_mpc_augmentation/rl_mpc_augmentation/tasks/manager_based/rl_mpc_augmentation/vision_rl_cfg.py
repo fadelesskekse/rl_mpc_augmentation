@@ -174,7 +174,7 @@ class CommandsCfg:
             lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(1, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
     )
 
@@ -247,13 +247,13 @@ class ObservationsCfg:
         ########END EXTREME PARKOUS OBS#################
 
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, history_length = 5,noise=Unoise(n_min=-0.2, n_max=0.2),)
-        # projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05),history_length=5)
-        # velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
-        # last_action = ObsTerm(func=mdp.last_action,history_length=5)
+        projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05),history_length=5)
+        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
+        last_action = ObsTerm(func=mdp.last_action,history_length=5)
 
-        # gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
-        #                                                     "offset": [0,.5],
-        #                                                     },history_length=5)
+        gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
+                                                            "offset": [0,.5],
+                                                            },history_length=5)
 
 
         # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
@@ -285,9 +285,9 @@ class ObservationsCfg:
 
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
        # priv_latent = ObsTerm(func=mdp.priv_latent, history_length=0)
-        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1)
-        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1)
-        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass, history_length=0,scale=1)
+        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1/100)
+        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1/10)
+        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass, history_length=0,scale=1/10)
         priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0,scale=1)
         priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0,scale=1)
 

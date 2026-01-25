@@ -161,7 +161,9 @@ class Actor(nn.Module):
             actor_layers.append(nn.Tanh())
         self.actor_backbone = nn.Sequential(*actor_layers)
 
-    def forward(self, obs, hist_encoding: bool, eval=False, scandots_latent=None):
+    def forward(self, obs, hist_encoding: bool = False, eval: bool=False, scandots_latent=None):
+
+      #  print(f"eval : {eval}")
         if not eval:
            # print(f"obs shape passed to actor forward: {obs.shape}")
             if self.if_scan_encode: #Do we want to encode the scan dots? 
@@ -201,7 +203,104 @@ class Actor(nn.Module):
             else:
                 #obs_prop_scan = obs[:, :self.num_prop + self.num_scan] #if we aren't encoding the scan, combine the raw scan obs with prop obs
                 obs_scan_actor_backbone_input = obs[:,:self.num_scan] #If we aren't encoding, just pass the raw obs
-                print(f"obs_scan_actor_backbone_input should be of size num_envs,0, it is: {obs_scan_actor_backbone_input.shape}")
+              #  print(f"obs_scan_actor_backbone_input should be of size num_envs,0, it is: {obs_scan_actor_backbone_input.shape}")
+            #obs_priv_explicit = obs[:, self.num_prop + self.num_scan:self.num_prop + self.num_scan + self.num_priv_explicit] #grabs the priviledged states
+                                                                                                                            # which are from the estimator
+
+            obs_priv_explicit = obs[:,self.num_scan: self.num_scan + self.num_priv_explicit]
+
+           # print(f"obs priv explicit in actor forward: {obs_priv_explicit}")
+
+            if obs_priv_explicit.shape[1] != self.num_priv_explicit:
+                raise ValueError(f"obs_priv_explicit should be of size {self.num_priv_explicit}, but it of size {obs_priv_explicit.shape[1]}")
+            
+           # print(f"hist_encoding: {hist_encoding}")
+            if hist_encoding:
+                latent = self.infer_hist_latent(obs)
+            else:
+               # print("We are using priv_latent")
+              #  print(f"shape of obs passed {obs.shape}")
+                latent = self.infer_priv_latent(obs)
+
+            #print(f"size of latent: {latent}")
+
+            extreme_parkour_obs_base = self.num_scan + self.num_priv_explicit + self.num_priv_latent + self.num_hist*self.num_prop
+
+            non_exr_pkr_obs = obs[:,extreme_parkour_obs_base:]
+
+           # print(f"non extreme obs: {non_exr_pkr_obs}")
+
+            base = self.num_scan + self.num_priv_explicit + self.num_priv_latent
+            half_prop = self.num_prop // 2
+            hist_offset = (self.num_hist - self.num_actor_backbone_prop_hist) * half_prop
+
+            
+            actor_backbone_prop_pos = obs[:,base + hist_offset: base + hist_offset + half_prop*self.num_actor_backbone_prop_hist]
+
+            actor_backbone_prop_vel = obs[:,base + half_prop*self.num_hist + hist_offset: base + half_prop*self.num_hist + hist_offset +half_prop*self.num_actor_backbone_prop_hist]
+
+          #  print(f"size of actor_pos_prop_back: {actor_backbone_prop_pos.shape[1]}")
+           # print(f"size of actor_vel_prop_back: {actor_backbone_prop_vel.shape[1]}")
+
+            if actor_backbone_prop_pos.shape[1] != self.num_actor_backbone_prop_hist*half_prop or actor_backbone_prop_vel.shape[1] != self.num_actor_backbone_prop_hist*half_prop:
+                
+                print(f"size of actor_pos_prop_back: {actor_backbone_prop_pos.shape[1]}")
+                print(f"size of actor_vel_prop_back: {actor_backbone_prop_vel.shape[1]}")
+                raise ValueError(f"Backbone pos or vel proprio history shape is off, it should be of size {self.num_actor_backbone_prop_hist*half_prop}")
+
+            
+            #backbone_input = torch.cat([obs_prop_scan, obs_priv_explicit, latent], dim=1)
+            backbone_input = torch.cat([obs_scan_actor_backbone_input, obs_priv_explicit, latent,actor_backbone_prop_pos,actor_backbone_prop_vel,non_exr_pkr_obs], dim=1)
+           
+            #print(f"shape of backbone input: {backbone_input.shape}")
+
+            if backbone_input.shape[1] != self.num_obs:
+                raise ValueError(f"backbone input should have shape of {self.num_obs} but it is of size {backbone_input}")
+
+
+            backbone_output = self.actor_backbone(backbone_input)
+            return backbone_output
+        
+        else:
+            # print(f"obs shape passed to actor forward: {obs.shape}")
+            if self.if_scan_encode: #Do we want to encode the scan dots? 
+                #print(f"obs in forward actor pass: {obs}")
+                #obs_scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
+                obs_scan = obs[:,:self.num_scan]
+
+                #print(f"obs_scan: {obs_scan}")
+
+                #print(f"obs shape: {obs.shape}")
+
+               # print(f"obs_scan shape: {obs_scan.shape}")
+
+                if obs_scan.shape[1] != self.num_scan:
+                    raise ValueError(f"obs_scan should be the same size as num_scan, it is size {obs_scan.shape[1]}")
+                
+                if scandots_latent is None: #If we dont pass a scandot_latent in the Actors forward pass, we generate a new latent. 
+                    scan_latent = self.scan_encoder(obs_scan)   
+                else:
+                    scan_latent = scandots_latent
+               # obs_prop_scan = torch.cat([obs[:, :self.num_prop], scan_latent], dim=1) #combines the scan latent and propropception observations into
+                                                                                        #one observation
+                obs_scan_actor_backbone_input = scan_latent
+
+               # print(f"scan output dim: {self.scan_encoder_output_dim}")
+              #  print(f"obs_scan_actor_backbone_input: {obs_scan_actor_backbone_input.shape}")
+
+               
+                if obs_scan_actor_backbone_input.shape[0] != obs.shape[0]:
+                    raise ValueError(f"Error in scan encoder output shape. 0th element shoudl be of size num_envs, it is {obs_scan_actor_backbone_input.shape[0]}")
+                 
+
+                if obs_scan_actor_backbone_input.shape[1] != self.scan_encoder_output_dim:
+                    raise ValueError(f"Error in size for 'obs_scan_actor_backbone_input'. Is {obs_scan_actor_backbone_input.shape[1]}, should be {self.scan_encoder_output_dim}")
+                
+
+            else:
+                #obs_prop_scan = obs[:, :self.num_prop + self.num_scan] #if we aren't encoding the scan, combine the raw scan obs with prop obs
+                obs_scan_actor_backbone_input = obs[:,:self.num_scan] #If we aren't encoding, just pass the raw obs
+              #  print(f"obs_scan_actor_backbone_input should be of size num_envs,0, it is: {obs_scan_actor_backbone_input.shape}")
             #obs_priv_explicit = obs[:, self.num_prop + self.num_scan:self.num_prop + self.num_scan + self.num_priv_explicit] #grabs the priviledged states
                                                                                                                             # which are from the estimator
 
@@ -258,9 +357,7 @@ class Actor(nn.Module):
 
             backbone_output = self.actor_backbone(backbone_input)
             return backbone_output
-        
-        else:
-            raise ValueError("eval for whatever reason is True, I need to relook at code")
+            #raise ValueError("eval for whatever reason is True, I need to relook at code")
         # else:
         #     if self.if_scan_encode:
         #         obs_scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
@@ -495,18 +592,18 @@ class ActorCriticRMA(nn.Module):
         # compute mean
         mean = self.actor(obs,hist_encoding)
        # print(f"Shape of obs passed ot update distirbution: {obs.shape}")
-        print(f"Shape of output of forward MLP pass {mean.shape}")
+       # print(f"Shape of output of forward MLP pass {mean.shape}")
         # compute standard deviation
 
        # print(f"Shape of self.std: {self.std.shape}")
         if self.noise_std_type == "scalar":
             std = self.std.expand_as(mean)
         elif self.noise_std_type == "log":
-            print(f"self.log_std: {self.log_std}")
-            print(f"self.log_std shape: {self.log_std.shape}")
+           # print(f"self.log_std: {self.log_std}")
+          #  print(f"self.log_std shape: {self.log_std.shape}")
             std = torch.exp(self.log_std).expand_as(mean)
-            print(f"std: {std}")
-            print(f"std shape: {std.shape}")
+           # print(f"std: {std}")
+           # print(f"std shape: {std.shape}")
 
         else:
             raise ValueError(f"Unknown standard deviation type: {self.noise_std_type}. Should be 'scalar' or 'log'")

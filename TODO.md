@@ -106,6 +106,17 @@
 
 39. Setup way to view estimated velocity vs real one.
 
+40. need to fix model export
+
+41. up the gait deviation weight 
+
+42. Try the 2 separate z lin vel rewards to maybe encourage smoother climbing of stairs. 
+
+    - Make velocity a command
+    - Reward tracking that velocity
+    - Add a reward that rewards a higher velocity?
+    - maybe start the robot at normal angles to the stairs
+        - have a delta yaw observation and reward that being small. 
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED
 

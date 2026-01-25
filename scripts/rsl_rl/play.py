@@ -191,40 +191,57 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # obtain the trained policy for inference
     policy = runner.get_inference_policy(device=env.unwrapped.device)
 
+   
+
     # extract the neural network module
     # we do this in a try-except to maintain backwards compatibility.
     try:
         # version 2.3 onwards
         policy_nn = runner.alg.policy
+        print(f"AmI here?")
     except AttributeError:
         # version 2.2 and below
         policy_nn = runner.alg.actor_critic
-
+    print("Herehere?")
     # extract the normalizer
     if hasattr(policy_nn, "actor_obs_normalizer"):
+       
         normalizer = policy_nn.actor_obs_normalizer
     elif hasattr(policy_nn, "student_obs_normalizer"):
+        
         normalizer = policy_nn.student_obs_normalizer
     else:
+       
         normalizer = None
+
+    print(f"made itpassed the norm")
 
     # export policy to onnx/jit
     export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-    export_policy_as_jit(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.pt")
-    export_policy_as_onnx(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
+
+  
+    #export_policy_as_jit(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.pt") #failing here
+    
+    #export_policy_as_onnx(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
+    
 
     dt = env.unwrapped.step_dt
+
+    print("before get obs")
 
     # reset environment
     obs = env.get_observations()
     timestep = 0
     global_step = 0
     # simulate environment
+
+    print("made it before sim")
     while simulation_app.is_running():
         start_time = time.time()
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
+           # print("Am I getting here? ")
             actions = policy(obs)
             # env stepping
             obs, _, _, extras = env.step(actions)
