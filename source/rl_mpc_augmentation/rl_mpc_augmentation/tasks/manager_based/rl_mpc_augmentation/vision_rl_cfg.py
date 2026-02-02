@@ -76,6 +76,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
         max_init_terrain_level=PLAYGROUND.num_rows - 1,
+        #max_init_terrain_level=0,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -171,10 +172,10 @@ class CommandsCfg:
         debug_vis=False,
         
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(0, .8), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(1, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
     )
 
@@ -233,9 +234,9 @@ class ObservationsCfg:
 
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
         
-        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0)
-        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0)
-        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass, history_length=0)
+        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1)
+        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1)
+        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass,params={"asset_cfg": SceneEntityCfg("robot", body_names="torso_link")}, history_length=0,scale=1,)
         priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0)
         priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0)
 
@@ -285,9 +286,9 @@ class ObservationsCfg:
 
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
        # priv_latent = ObsTerm(func=mdp.priv_latent, history_length=0)
-        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1/100)
-        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1/10)
-        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass, history_length=0,scale=1/10)
+        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1)
+        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1)
+        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass,params={"asset_cfg": SceneEntityCfg("robot", body_names="torso_link")}, history_length=0,scale=1)
         priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0,scale=1)
         priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0,scale=1)
 
@@ -345,8 +346,8 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "mass_distribution_params": (-1.0, 3.0),
-            "operation": "add",
+            "mass_distribution_params": (.8, 1.2),
+            "operation": "scale",
         },
     )
 
@@ -367,8 +368,8 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "stiffness_distribution_params":(.9,1.1),
-            "damping_distribution_params": (.9,1.1),
+            "stiffness_distribution_params":(.8,1.2),
+            "damping_distribution_params": (.8,1.2),
             "operation": "scale"
         },
     )
@@ -392,7 +393,7 @@ class EventCfg:
     # (3) Reset base position and orientation upon reset
     #Justification: Standard practice to randomize initial pose slightly
     reset_base = EventTerm(
-        func=mdp.reset_root_state_uniform,
+        func=mdp.reset_root_state_uniform_grouped_yaws,
         mode="reset",
         params={
             "pose_range": {"x": (0, 0), "y": (0, 0), "yaw": (-3.14, 3.14)},
@@ -404,6 +405,7 @@ class EventCfg:
                 "pitch": (0.0, 0.0),
                 "yaw": (0.0, 0.0),
             },
+            "max_jitter": (-10,10),
         },
     )
 
@@ -422,10 +424,11 @@ class EventCfg:
     #Justification: Improve robustness by pushing robot at random
     # interval
     push_robot = EventTerm(
-        func=mdp.push_by_setting_velocity,
+        func=mdp.push_by_setting_velocity_delayed,
         mode="interval",
-        interval_range_s=(5.0, 5.0),
-        params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
+        interval_range_s=(1, 20),
+        params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)},"curr_lim":.8}
+                #"delayed_iteration": 1000},
     )
 
 
@@ -442,7 +445,7 @@ class RewardsCfg:
     #Justification: Need to track a body frame velocity
     track_lin_vel_xy = RewTerm(
         func=mdp.track_lin_vel_xy_yaw_frame_exp,
-        weight=1.0,
+        weight=1.5,
         params={"command_name": "base_velocity", 
                 "std": math.sqrt(0.25)},
     )
@@ -454,7 +457,7 @@ class RewardsCfg:
         #keep robot pointed in direction it started in 
     track_ang_vel_z = RewTerm(
         func=mdp.track_ang_vel_z_exp, 
-        weight=0.5, 
+        weight=1.25, 
         params={"command_name": "base_velocity", 
                 "std": math.sqrt(0.25)}
     )
@@ -463,6 +466,10 @@ class RewardsCfg:
     #Justification: Encourage robot to not tip over
     base_angular_velocity_xy = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
+
+    #neg_z_vel = RewTerm(func=mdp.lin_vel_z_negative_l2, weight=-2.0)
+    #pos_z_vel = RewTerm(func=mdp.lin_vel_z_positive_l2, weight=-2.0)
+
     # (5) Minimize joint effort, action_rate, energy, and penalize hitting joint limit
     # Justification: Keep energy minimal, concurrent actions similar, minimize fast joints
     joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
@@ -476,7 +483,7 @@ class RewardsCfg:
 
     gait_deviation = RewTerm(
         func=mdp.gait_deviation,
-        weight = .15,
+        weight = .25,
         params={
             "nominal": .5
         }
@@ -518,7 +525,7 @@ class RewardsCfg:
 
     joint_deviation_ankle = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-.25,
+        weight=-.05,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_ankle_pitch_joint"])},
     )
 

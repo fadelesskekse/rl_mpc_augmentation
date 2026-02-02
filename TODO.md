@@ -110,13 +110,16 @@
 
 41. up the gait deviation weight 
 
-42. Try the 2 separate z lin vel rewards to maybe encourage smoother climbing of stairs. 
-
     - Make velocity a command
     - Reward tracking that velocity
     - Add a reward that rewards a higher velocity?
-    - maybe start the robot at normal angles to the stairs
-        - have a delta yaw observation and reward that being small. 
+
+42. Added higher scale to vel tracking
+    lowered ankle dev. mininimization
+    added a third 128 node layer to the priv encoder
+
+41. queue size in _AsyncWriter print statement
+    
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED
 
@@ -141,3 +144,4 @@
 35. ensure ActorCriticRMA.evaluate works properly
     - called in PPOCustom.act, is passed the entire obs from rollout. 
     - looks good to me, its just passed the entire critic obs stuff, which aligns with extreme parkour passing all of the raw stuff to it. 
+

@@ -103,18 +103,27 @@ def gait_deviation(env: ManagerBasedRLEnv,
 
    return rew
 
-def lin_vel_z_negative_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
-
+def lin_vel_z_negative_l2(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
     z_vel = asset.data.root_lin_vel_b[:, 2]
 
-    return torch.clamp(z_vel, max=0.0)
+    # clamp to negative part, then square
+    z_vel_neg = torch.clamp(z_vel, max=0.0)
+    return torch.square(z_vel_neg)
 
-def lin_vel_z_positive_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
 
+def lin_vel_z_positive_l2(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
     z_vel = asset.data.root_lin_vel_b[:, 2]
 
-    return torch.clamp(z_vel, min=0.0)
+    # clamp to positive part, then square
+    z_vel_pos = torch.clamp(z_vel, min=0.0)
+    return torch.square(z_vel_pos)

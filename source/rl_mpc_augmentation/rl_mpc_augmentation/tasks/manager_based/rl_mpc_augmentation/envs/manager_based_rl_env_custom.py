@@ -85,7 +85,9 @@ class ManagerBasedRLEnv(ManagerBasedEnvCustom, gym.Env):
        
         # -- counter for curriculum
         self.common_step_counter = 0
+        self.global_iteration = 0
 
+       
         # initialize the episode length buffer BEFORE loading the managers to use it in mdp functions.
         self.episode_length_buf = torch.zeros(cfg.scene.num_envs, device=cfg.sim.device, dtype=torch.long)
 

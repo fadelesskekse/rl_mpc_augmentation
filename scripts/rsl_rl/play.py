@@ -172,6 +172,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # wrap around environment for rsl-rl
     #env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
+
+    #env.global_iteration = 10000
     
     env = RslRlVecEnvWrapperCustom(env, clip_actions=agent_cfg.clip_actions)
 
@@ -227,7 +229,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     dt = env.unwrapped.step_dt
 
-    print("before get obs")
+   # print("before get obs")
 
     # reset environment
     obs = env.get_observations()
@@ -235,7 +237,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     global_step = 0
     # simulate environment
 
-    print("made it before sim")
+    #print("made it before sim")
     while simulation_app.is_running():
         start_time = time.time()
         # run everything in inference mode

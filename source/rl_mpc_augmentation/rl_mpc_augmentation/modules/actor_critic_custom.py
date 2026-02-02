@@ -217,16 +217,25 @@ class Actor(nn.Module):
            # print(f"hist_encoding: {hist_encoding}")
             if hist_encoding:
                 latent = self.infer_hist_latent(obs)
-            else:
-               # print("We are using priv_latent")
-              #  print(f"shape of obs passed {obs.shape}")
-                latent = self.infer_priv_latent(obs)
 
-            #print(f"size of latent: {latent}")
+                
+
+            else:
+
+                latent = self.infer_priv_latent(obs)
+                 # Adaptation module update
+               # with torch.inference_mode():
+                   # print(f"priv latenet: {self.infer_priv_latent(obs)}")
+                
+
+
+            
 
             extreme_parkour_obs_base = self.num_scan + self.num_priv_explicit + self.num_priv_latent + self.num_hist*self.num_prop
 
             non_exr_pkr_obs = obs[:,extreme_parkour_obs_base:]
+
+            
 
            # print(f"non extreme obs: {non_exr_pkr_obs}")
 
@@ -390,6 +399,8 @@ class Actor(nn.Module):
 
         priv = obs[:,self.num_scan + self.num_priv_explicit: self.num_scan + self.num_priv_explicit + self.num_priv_latent]
 
+        #print(f"priv latent input: {priv}")
+
         #print(f"priv: {priv}")
         return self.priv_encoder(priv)
     
@@ -397,7 +408,7 @@ class Actor(nn.Module):
         #hist = obs[:, -self.num_hist*self.num_prop:]
         hist = obs[:,self.num_scan + self.num_priv_explicit + self.num_priv_latent: self.num_scan + self.num_priv_explicit + self.num_priv_latent + self.num_hist*self.num_prop]
         
-       # print(f"hist: {hist}")
+        #print(f"hist: {hist}")
        # print(f"proprio hist: {hist}")
 
         num_envs = hist.shape[0]

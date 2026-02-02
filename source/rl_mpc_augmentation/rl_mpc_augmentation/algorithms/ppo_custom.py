@@ -283,6 +283,25 @@ class PPOCustom:
         mean_estimator_loss = 0
         mean_priv_reg_loss = 0
 
+        mean_value_batch =0
+        mean_returns_batch  = 0 
+        mean_target_value_batch = 0
+
+
+
+        mean_advantages_batch = 0
+        mean_ratio = 0
+        mean_actions_log_prob_batch = 0
+        mean_old_actions_log_prob_batch = 0
+        mean_obs_batch= 0
+        mean_actions_batch = 0
+
+
+        
+
+        
+
+
         # -- RND loss
         if self.rnd:
             mean_rnd_loss = 0
@@ -360,6 +379,8 @@ class PPOCustom:
             actions_log_prob_batch = self.policy.get_actions_log_prob(actions_batch)
             # -- critic
             value_batch = self.policy.evaluate(obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1])
+
+           
             # -- entropy
             # we only keep the entropy of the first augmentation (the original one)
             mu_batch = self.policy.action_mean[:original_batch_size]
@@ -377,6 +398,9 @@ class PPOCustom:
             priv_reg_stage = min(max((self.counter - self.priv_reg_coef_schedual[2]), 0) / self.priv_reg_coef_schedual[3], 1)
             priv_reg_coef = priv_reg_stage * (self.priv_reg_coef_schedual[1] - self.priv_reg_coef_schedual[0]) + self.priv_reg_coef_schedual[0]
             #coefficient goes from 0 to .1
+
+            #priv_reg_coef_schedual = [0, 0.1, 2000, 3000],
+            #priv_reg_coef_schedual_resume = [0, 0.1, 0, 1],
 
             # # Estimator
             # #priv_states_predicted = self.estimator(obs_batch[:, :self.num_prop])  # obs in batch is with true priv_states
@@ -455,8 +479,10 @@ class PPOCustom:
             #loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
             loss = surrogate_loss + \
                 self.value_loss_coef * value_loss - \
-                self.entropy_coef * entropy_batch.mean() + \
-                priv_reg_coef*priv_reg_loss
+                self.entropy_coef * entropy_batch.mean() #+ \
+                #priv_reg_coef*priv_reg_loss
+            
+            #print(f"priv_reg_coef: {priv_reg_coef}")
 
             # Symmetry loss
             if self.symmetry:
@@ -568,6 +594,18 @@ class PPOCustom:
                 self.rnd_optimizer.step()
 
             # Store the losses
+            mean_advantages_batch += advantages_batch.mean().item()
+            mean_ratio += ratio.mean().item()
+            mean_actions_log_prob_batch += actions_log_prob_batch.mean().item()
+            mean_old_actions_log_prob_batch += old_actions_log_prob_batch.mean().item()
+            mean_value_batch += value_batch.mean().item()
+            mean_returns_batch += returns_batch.mean().item()
+            mean_target_value_batch += target_values_batch.mean().item()
+
+           
+            mean_obs_batch += obs_batch["policy"].mean().item()
+            mean_actions_batch += actions_batch.mean().item()
+
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
             mean_entropy += entropy_batch.mean().item()
@@ -579,16 +617,30 @@ class PPOCustom:
             if mean_symmetry_loss is not None:
                 mean_symmetry_loss += symmetry_loss.item()
 
+       
 
         # -- For PPO
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
+        mean_value_batch /= num_updates
+        mean_returns_batch /= num_updates
+        mean_target_value_batch /= num_updates
+        mean_advantages_batch /= num_updates
+        mean_ratio /= num_updates
+        mean_actions_log_prob_batch /= num_updates
+        mean_old_actions_log_prob_batch /= num_updates
+        mean_obs_batch /= num_updates
+        mean_actions_batch /= num_updates
+
+
+
         mean_surrogate_loss /= num_updates
         mean_entropy /= num_updates
 
         mean_estimator_loss /= num_updates
         mean_priv_reg_loss /= num_updates
 
+        
         # -- For RND
         if mean_rnd_loss is not None:
             mean_rnd_loss /= num_updates
@@ -598,13 +650,41 @@ class PPOCustom:
         # -- Clear the storage
         self.storage.clear()
 
+
+        #         mean_value_batch =0
+        # mean_returns_batch  = 0 
+        # mean_target_value_batch = 0
+
+
+
+        # mean_advantages_batch = 0
+        # mean_ratio = 0
+        # mean_actions_log_prob_batch = 0
+        # mean_old_actions_log_prob_batch = 0
+        # mean_obs_batch= 0
+        # mean_actions_batch = 0
+
         # construct the loss dictionary
         loss_dict = {
             "value_function": mean_value_loss,
+
+            "value_batch":   mean_value_batch,
+            "returns_batch":mean_returns_batch,
+            "target_value_batch": mean_target_value_batch,
+            "mean_advantages_batch":mean_advantages_batch,
+            "mean_ratio":mean_ratio,
+            "mean_actions_log_prob_batch":mean_actions_log_prob_batch ,
+            "mean_old_actions_log_prob_batch":mean_old_actions_log_prob_batch,
+            "mean_obs_batch":mean_obs_batch,
+            "mean_actions_batch":mean_actions_batch,
+
+
+
             "surrogate": mean_surrogate_loss,
             "entropy": mean_entropy,
             #"estimator": estimator_loss,
             "priv_reg": mean_priv_reg_loss,
+            "kl_mean": kl_mean
         }
         if self.rnd:
             loss_dict["rnd"] = mean_rnd_loss

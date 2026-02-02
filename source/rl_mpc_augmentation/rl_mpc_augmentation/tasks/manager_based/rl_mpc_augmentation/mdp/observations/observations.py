@@ -171,39 +171,82 @@ def priv_latent(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg
 #         priv_latent_friction= ObsTerm(func=mdp., history_length=0)
 
 
-def priv_latent_gains_stiffness(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def priv_latent_gains_stiffness(
+    env: ManagerBasedEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
 
     asset: Articulation = env.scene[asset_cfg.name]
 
     stiffness = asset.data.joint_stiffness[:, asset_cfg.joint_ids]
+    stiffness_default = asset.data.default_joint_stiffness[:, asset_cfg.joint_ids]
 
-    #return torch.ones_like(stiffness)
+    # avoid divide-by-zero just in case
+    eps = 1e-6
+    scale = 0.1 * stiffness_default + eps
 
-    return stiffness
+    stiffness_norm = (stiffness - stiffness_default) / scale
+
+   # print(f"stiffness_default: {stiffness_default}")
+
+   # print(f"stiffness random: {stiffness}")
+
+    return stiffness_norm
     
 
-def priv_latent_gains_damping(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def priv_latent_gains_damping(
+    env: ManagerBasedEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
 
     asset: Articulation = env.scene[asset_cfg.name]
-    
+
     damping = asset.data.joint_damping[:, asset_cfg.joint_ids]
-    #return torch.ones_like(damping)
+    damping_default = asset.data.default_joint_damping[:, asset_cfg.joint_ids]
 
-    return damping
+   # print(f"dampign default: {damping_default}")
+
+    # avoid divide-by-zero just in case
+    eps = 1e-6
+    scale = 0.2 * damping_default + eps
+
+    damping_norm = (damping - damping_default) / scale
+    #print(f"damping_norm: {damping_norm}")
+
+    return damping_norm
 
 
-
-def priv_latent_mass(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def priv_latent_mass(
+    env: ManagerBasedEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
 
     asset: Articulation = env.scene[asset_cfg.name]
-
     device = env.device
 
+    # current randomized mass (per env)
     mass = asset.root_physx_view.get_masses()[:, 9].unsqueeze(-1).to(device)
 
-    #return torch.ones_like(mass)
+    # nominal/default mass
+    mass_default = asset.data.default_mass[:,asset_cfg.body_ids].to(device)
 
-    return mass
+   # print(f"body names: {asset_cfg.body_names}")
+
+   # print(f"mass default shape {mass_default.shape}")
+
+   # print(f"mass default: {mass_default}")
+
+    #print(f"mass nwe: {mass}")
+
+    # avoid divide-by-zero just in case
+    eps = 1e-6
+    scale = 0.2 * mass_default + eps
+
+    mass_norm = (mass - mass_default) / scale
+
+    #print(f"mass norm {mass_norm}")
+
+    return mass_norm
 
 def priv_latent_com(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
 

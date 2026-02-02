@@ -130,10 +130,12 @@ class OnPolicyRunnerCustom:
 
         # Start training
         start_iter = self.current_learning_iteration
+       # self.env.env.unwrapped.global_iteration = start_iter-1
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
             start = time.time()
-            hist_encoding = it % self.dagger_update_freq == 0
+            #hist_encoding = it % self.dagger_update_freq == 0
+            hist_encoding = False
             # Rollout
             with torch.inference_mode():
                 for _ in range(self.num_steps_per_env):
@@ -186,6 +188,13 @@ class OnPolicyRunnerCustom:
 
                 # compute returns
                 self.alg.compute_returns(obs)
+
+
+            
+            #print(f"self.env.test {self.env.env.unwrapped.global_iteration}")
+          #  self.env.env.unwrapped.global_iteration += 1
+
+            
 
             # update policy
             loss_dict = self.alg.update()
@@ -364,7 +373,9 @@ class OnPolicyRunnerCustom:
         iteration_time = locs["collection_time"] + locs["learn_time"]
         # -- Episode info
         ep_string = ""
+        test = 0
         if locs["ep_infos"]:
+            #print(f"iteration: {locs['it']} in on policy runner during log")
             for key in locs["ep_infos"][0]:
                 #print(f"writer keys: {key}")
                 infotensor = torch.tensor([], device=self.device)
@@ -380,9 +391,14 @@ class OnPolicyRunnerCustom:
                 value = torch.mean(infotensor)
                 # log to logger and terminal
                 if "/" in key:
+                   # test += 1
+                   # print(f"test {test}")
+                   # print(f"add_scalar call for iteration {locs['it']}")
                     self.writer.add_scalar(key, value, locs["it"])
                     ep_string += f"""{f'{key}:':>{pad}} {value:.4f}\n"""
                 else:
+                   # test += 1
+                   # print(f"test {test}")
                     self.writer.add_scalar("Episode/" + key, value, locs["it"])
                     ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
 
@@ -393,21 +409,29 @@ class OnPolicyRunnerCustom:
 
         # -- Losses
         for key, value in locs["loss_dict"].items():
+           # print(f"iteration in loss add scalar: {locs['it']}")
+           # test += 1
+            #print(f"test {test}")
             self.writer.add_scalar(f"Loss/{key}", value, locs["it"])
 
        # print(f"mean_hist: {locs['mean_hist_latent_loss']}")
-        self.writer.add_scalar(f"Loss/hist_latent_loss", locs['mean_hist_latent_loss'], locs["it"])
+       # self.writer.add_scalar(f"Loss/hist_latent_loss", locs['mean_hist_latent_loss'], locs["it"])
 
         #for key, value in locs["mean_hist_latent_loss"].items():
             #self.writer.add_scalar(f"Loss/{key}", value, locs["it"])
 
-        
+       # test += 1
+        #print(f"test {test}")
         self.writer.add_scalar("Loss/learning_rate", self.alg.learning_rate, locs["it"])
 
         # -- Policy
+       # test += 1
+        #print(f"test {test}")
         self.writer.add_scalar("Policy/mean_noise_std", mean_std.item(), locs["it"])
+        #test += 1
+        #print(f"test {test}")
         self.writer.add_scalar("Policy/action_mean", action_mean.item(), locs["it"])
-
+       
      
 
         action_stds = self.alg.policy.action_std[0]  # [24, 29] or sometimes [29]
@@ -415,28 +439,53 @@ class OnPolicyRunnerCustom:
         #print(f"shape: {len(action_stds)}")
 
         for i in range(len(action_stds)):
+           # test += 1
+           # print(f"test {test}")
             self.writer.add_scalar(f"Policy/action_std_{i}", action_stds[i].item(), locs["it"])
+            
 
         # -- Performance
+       # test += 1
+        #print(f"test {test}")
         self.writer.add_scalar("Perf/total_fps", fps, locs["it"])
+       # test += 1
+       # print(f"test {test}")
         self.writer.add_scalar("Perf/collection time", locs["collection_time"], locs["it"])
+       # test += 1
+       # print(f"test {test}")
         self.writer.add_scalar("Perf/learning_time", locs["learn_time"], locs["it"])
+        
 
         # -- Training
         if len(locs["rewbuffer"]) > 0:
             # separate logging for intrinsic and extrinsic rewards
             if hasattr(self.alg, "rnd") and self.alg.rnd:
+               # test += 3
+               # print(f"test {test}")
                 self.writer.add_scalar("Rnd/mean_extrinsic_reward", statistics.mean(locs["erewbuffer"]), locs["it"])
                 self.writer.add_scalar("Rnd/mean_intrinsic_reward", statistics.mean(locs["irewbuffer"]), locs["it"])
                 self.writer.add_scalar("Rnd/weight", self.alg.rnd.weight, locs["it"])
+               
             # everything else
+           # test += 1
+           # print(f"test {test}")
             self.writer.add_scalar("Train/mean_reward", statistics.mean(locs["rewbuffer"]), locs["it"])
+            #test += 1
+            #print(f"test {test}")
             self.writer.add_scalar("Train/mean_episode_length", statistics.mean(locs["lenbuffer"]), locs["it"])
+            
             if self.logger_type != "wandb":  # wandb does not support non-integer x-axis logging
+                #test += 1
+               # print(f"test {test}")
                 self.writer.add_scalar("Train/mean_reward/time", statistics.mean(locs["rewbuffer"]), self.tot_time)
+                #test += 1
+                #print(f"test {test}")
                 self.writer.add_scalar(
                     "Train/mean_episode_length/time", statistics.mean(locs["lenbuffer"]), self.tot_time
                 )
+
+        
+       # self.writer.flush()
 
         str = f" \033[1m Learning iteration {locs['it']}/{locs['tot_iter']} \033[0m "
 
@@ -458,6 +507,9 @@ class OnPolicyRunnerCustom:
                     f"""{'Mean intrinsic reward:':>{pad}} {statistics.mean(locs['irewbuffer']):.2f}\n"""
                 )
             log_string += f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
+
+            log_string += f"""{'Action Mean:':>{pad}} {action_mean.item():.2f}\n"""
+            
             # -- episode info
             log_string += f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n"""
         else:
@@ -693,11 +745,11 @@ class OnPolicyRunnerCustom:
             elif self.logger_type == "wandb":
                 from rsl_rl.utils.wandb_utils import WandbSummaryWriter
 
-                self.writer = WandbSummaryWriter(log_dir=self.log_dir, flush_secs=10, cfg=self.cfg)
+                self.writer = WandbSummaryWriter(log_dir=self.log_dir, flush_secs=1, cfg=self.cfg)
                 self.writer.log_config(self.env.cfg, self.cfg, self.alg_cfg, self.policy_cfg)
             elif self.logger_type == "tensorboard":
                 from torch.utils.tensorboard import SummaryWriter
 
-                self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
+                self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10,max_queue=52)
             else:
                 raise ValueError("Logger type not found. Please choose 'neptune', 'wandb' or 'tensorboard'.")
