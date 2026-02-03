@@ -76,7 +76,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
         #max_init_terrain_level=PLAYGROUND.num_rows - 1,
-        max_init_terrain_level=6,
+        max_init_terrain_level=0,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -172,10 +172,10 @@ class CommandsCfg:
         debug_vis=False,
         
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0.8, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(1, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
     )
 
@@ -398,12 +398,12 @@ class EventCfg:
         params={
             "pose_range": {"x": (0, 0), "y": (0, 0), "yaw": (-3.14, 3.14)},
             "velocity_range": {
-                "x": (0.0, 0.0),
-                "y": (0.0, 0.0),
-                "z": (0.0, 0.0),
-                "roll": (0.0, 0.0),
-                "pitch": (0.0, 0.0),
-                "yaw": (0.0, 0.0),
+                "x": (-.025, 0.025),
+                "y": (-0.025, 0.025),
+                "z": (-0.025, 0.025),
+                "roll": (-0.087, 0.087),
+                "pitch": (-0.087, 0.087),
+                "yaw": (-0.087, 0.087),
             },
             "max_jitter": (-10,10),
         },
