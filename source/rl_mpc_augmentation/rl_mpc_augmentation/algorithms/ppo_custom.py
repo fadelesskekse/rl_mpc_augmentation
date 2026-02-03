@@ -286,6 +286,8 @@ class PPOCustom:
         mean_value_batch =0
         mean_returns_batch  = 0 
         mean_target_value_batch = 0
+        mean_value_obs_batch = 0
+        mean_value_clipped_batch = 0
 
 
 
@@ -476,11 +478,13 @@ class PPOCustom:
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
+            
+
             #loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
             loss = surrogate_loss + \
                 self.value_loss_coef * value_loss - \
-                self.entropy_coef * entropy_batch.mean() #+ \
-                #priv_reg_coef*priv_reg_loss
+                self.entropy_coef * entropy_batch.mean() + \
+                priv_reg_coef*priv_reg_loss
             
             #print(f"priv_reg_coef: {priv_reg_coef}")
 
@@ -599,11 +603,13 @@ class PPOCustom:
             mean_actions_log_prob_batch += actions_log_prob_batch.mean().item()
             mean_old_actions_log_prob_batch += old_actions_log_prob_batch.mean().item()
             mean_value_batch += value_batch.mean().item()
+            mean_value_clipped_batch += value_clipped.mean().item()
             mean_returns_batch += returns_batch.mean().item()
             mean_target_value_batch += target_values_batch.mean().item()
 
            
             mean_obs_batch += obs_batch["policy"].mean().item()
+            mean_value_obs_batch += obs_batch["critic"].mean().item()
             mean_actions_batch += actions_batch.mean().item()
 
             mean_value_loss += value_loss.item()
@@ -631,6 +637,8 @@ class PPOCustom:
         mean_old_actions_log_prob_batch /= num_updates
         mean_obs_batch /= num_updates
         mean_actions_batch /= num_updates
+        mean_value_obs_batch /= num_updates
+        mean_value_clipped_batch /= num_updates
 
 
 
@@ -677,6 +685,8 @@ class PPOCustom:
             "mean_old_actions_log_prob_batch":mean_old_actions_log_prob_batch,
             "mean_obs_batch":mean_obs_batch,
             "mean_actions_batch":mean_actions_batch,
+            "mean_value_obs_batch":mean_value_obs_batch,
+            "mean_value_clipped_batch": mean_value_clipped_batch,
 
 
 

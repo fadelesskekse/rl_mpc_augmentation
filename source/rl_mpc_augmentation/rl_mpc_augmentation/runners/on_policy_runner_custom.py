@@ -134,8 +134,8 @@ class OnPolicyRunnerCustom:
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
             start = time.time()
-            #hist_encoding = it % self.dagger_update_freq == 0
-            hist_encoding = False
+            hist_encoding = it % self.dagger_update_freq == 0
+            #hist_encoding = False
             # Rollout
             with torch.inference_mode():
                 for _ in range(self.num_steps_per_env):

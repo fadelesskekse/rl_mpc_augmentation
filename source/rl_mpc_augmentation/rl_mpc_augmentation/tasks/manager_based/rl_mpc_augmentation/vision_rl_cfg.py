@@ -75,8 +75,8 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         prim_path="/World/ground",
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
-        max_init_terrain_level=PLAYGROUND.num_rows - 1,
-        #max_init_terrain_level=0,
+        #max_init_terrain_level=PLAYGROUND.num_rows - 1,
+        max_init_terrain_level=6,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -172,10 +172,10 @@ class CommandsCfg:
         debug_vis=False,
         
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0, .8), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(0.8, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(1, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         ),
     )
 
@@ -445,7 +445,7 @@ class RewardsCfg:
     #Justification: Need to track a body frame velocity
     track_lin_vel_xy = RewTerm(
         func=mdp.track_lin_vel_xy_yaw_frame_exp,
-        weight=1.5,
+        weight=3,#was 1.5
         params={"command_name": "base_velocity", 
                 "std": math.sqrt(0.25)},
     )
@@ -457,7 +457,7 @@ class RewardsCfg:
         #keep robot pointed in direction it started in 
     track_ang_vel_z = RewTerm(
         func=mdp.track_ang_vel_z_exp, 
-        weight=1.25, 
+        weight=2.5, 
         params={"command_name": "base_velocity", 
                 "std": math.sqrt(0.25)}
     )
@@ -465,9 +465,10 @@ class RewardsCfg:
     # (4) Minimize angular velocity in XY plane
     #Justification: Encourage robot to not tip over
     base_angular_velocity_xy = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
-    base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
+    #base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
 
-    #neg_z_vel = RewTerm(func=mdp.lin_vel_z_negative_l2, weight=-2.0)
+    neg_z_vel = RewTerm(func=mdp.lin_vel_z_negative_l2, weight=-3.0)
+    #z_accel = RewTerm(func=mdp.body_lin_acc_l2_z,weight=-1)
     #pos_z_vel = RewTerm(func=mdp.lin_vel_z_positive_l2, weight=-2.0)
 
     # (5) Minimize joint effort, action_rate, energy, and penalize hitting joint limit
@@ -483,7 +484,7 @@ class RewardsCfg:
 
     gait_deviation = RewTerm(
         func=mdp.gait_deviation,
-        weight = .25,
+        weight = 1,
         params={
             "nominal": .5
         }
@@ -493,7 +494,7 @@ class RewardsCfg:
     # Justification: Encourage robot to stay near nominal pose
     joint_deviation_arms = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.25,
+        weight=-0.45,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot",
@@ -519,7 +520,7 @@ class RewardsCfg:
     )
     joint_deviation_legs = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1.0,
+        weight=-1.25,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
     )
 
@@ -532,7 +533,7 @@ class RewardsCfg:
     #(7) Flat Orientation
     #Justification: Promote robot to be upright
     # -- robot
-    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
+    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-9.0) #was -5
     #base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.78})
 
     #() Minimize Ankle Torque
@@ -671,7 +672,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
         # self.observations.critic.joint_vel_rel.history_length=self.history_len
 
         self.decimation = 4
-        self.episode_length_s = 20.0
+        self.episode_length_s = 5
         # viewer settings
         self.viewer.eye = (8.0, 0.0, 5.0)
         # simulation settings

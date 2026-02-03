@@ -127,3 +127,19 @@ def lin_vel_z_positive_l2(
     # clamp to positive part, then square
     z_vel_pos = torch.clamp(z_vel, min=0.0)
     return torch.square(z_vel_pos)
+
+
+# def body_lin_acc_l2_z(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+#     """Penalize the linear acceleration of bodies using L2-kernel."""
+#     asset: Articulation = env.scene[asset_cfg.name]
+#     return torch.sum(torch.norm(asset.data.body_lin_acc_w[:, asset_cfg.body_ids, :], dim=-1), dim=1)
+
+def body_lin_acc_l2_z(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Penalize only the z-axis linear acceleration of bodies."""
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    # Extract only z acceleration (index 2)
+    z_acc = asset.data.body_lin_acc_w[:, asset_cfg.body_ids, 2]
+
+    # L2 kernel → square it
+    return torch.sum(torch.square(z_acc), dim=1)
