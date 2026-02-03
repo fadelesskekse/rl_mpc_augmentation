@@ -156,7 +156,7 @@ class CurriculumCfg:
 # MDP settings
 ##
 
-@configclass
+@configclass 
 class CommandsCfg:
     """Command specifications for the MDP."""
 
