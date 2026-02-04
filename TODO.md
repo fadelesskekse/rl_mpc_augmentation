@@ -118,8 +118,12 @@
     lowered ankle dev. mininimization
     added a third 128 node layer to the priv encoder
 
-41. queue size in _AsyncWriter print statement
-    
+43. Recall what size these batches are, what does mean() and item() do?
+
+44. Does estimator get saved between resume calls? 
+
+45. History encoder and estimator optimizers and models are not being saved? 
+
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED
 

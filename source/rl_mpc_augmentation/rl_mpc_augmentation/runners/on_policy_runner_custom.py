@@ -23,7 +23,7 @@ from rl_mpc_augmentation.algorithms.ppo_custom import PPOCustom
 
 from ..modules import *
 #from ..modules.actor_critic_custom import ActorCriticRMA
-#from rl_mpc_augmentation.estimator.estimator import Estimator
+from rl_mpc_augmentation.modules.estimator import Estimator
 
 class OnPolicyRunnerCustom:
     """On-policy runner for training and evaluation of actor-critic methods."""
@@ -137,6 +137,7 @@ class OnPolicyRunnerCustom:
             hist_encoding = it % self.dagger_update_freq == 0
             #hist_encoding = False
             # Rollout
+           # print("Starting rollout")
             with torch.inference_mode():
                 for _ in range(self.num_steps_per_env):
                     # Sample actions
@@ -144,6 +145,8 @@ class OnPolicyRunnerCustom:
                     actions = self.alg.act(obs,hist_encoding)
                     # Step the environment
                     obs, rewards, dones, extras = self.env.step(actions.to(self.env.device))
+
+                   # print(f"Right after step during rollout")
 
                     #print("policy obs:", obs["policy"])
                     # Move to device
@@ -544,14 +547,24 @@ class OnPolicyRunnerCustom:
         saved_dict = {
             "model_state_dict": self.alg.policy.state_dict(),
             "optimizer_state_dict": self.alg.optimizer.state_dict(),
+            "hist_encoder_optimizer_state_dict": self.alg.hist_encoder_optimizer.state_dict(),
+            "estimator_optimizer_state_dict": self.alg.estimator_optimizer.state_dict(),
             "iter": self.current_learning_iteration,
             "infos": infos,
         }
+
+                # -- Save estimator if used
+        if hasattr(self.alg, "estimator") and self.alg.estimator is not None:
+            saved_dict["estimator_state_dict"] = self.alg.estimator.state_dict()
+
+
         # -- Save RND model if used
         if hasattr(self.alg, "rnd") and self.alg.rnd:
             saved_dict["rnd_state_dict"] = self.alg.rnd.state_dict()
             saved_dict["rnd_optimizer_state_dict"] = self.alg.rnd_optimizer.state_dict()
         torch.save(saved_dict, path)
+
+
 
         # upload model to external logging service
         if self.logger_type in ["neptune", "wandb"] and not self.disable_logs:
@@ -561,6 +574,11 @@ class OnPolicyRunnerCustom:
         loaded_dict = torch.load(path, weights_only=False, map_location=map_location)
         # -- Load model
         resumed_training = self.alg.policy.load_state_dict(loaded_dict["model_state_dict"])
+        # -- Load estimator if used
+        if hasattr(self.alg, "estimator") and self.alg.estimator is not None and "estimator_state_dict" in loaded_dict:
+            self.alg.estimator.load_state_dict(loaded_dict["estimator_state_dict"])
+            print("Loaded estimator dict")
+
         # -- Load RND model if used
         if hasattr(self.alg, "rnd") and self.alg.rnd:
             self.alg.rnd.load_state_dict(loaded_dict["rnd_state_dict"])
@@ -568,6 +586,16 @@ class OnPolicyRunnerCustom:
         if load_optimizer and resumed_training:
             # -- algorithm optimizer
             self.alg.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
+
+                # -- history encoder optimizer
+            if hasattr(self.alg, "hist_encoder_optimizer") and "hist_encoder_optimizer_state_dict" in loaded_dict:
+                self.alg.hist_encoder_optimizer.load_state_dict(loaded_dict["hist_encoder_optimizer_state_dict"])
+                print("Loaded hist opt dict")
+            # -- estimator optimizer
+            if hasattr(self.alg, "estimator_optimizer") and "estimator_optimizer_state_dict" in loaded_dict:
+                self.alg.estimator_optimizer.load_state_dict(loaded_dict["estimator_optimizer_state_dict"])
+                print("Loaded estimator opt dict")
+
             # -- RND optimizer if used
             if hasattr(self.alg, "rnd") and self.alg.rnd:
                 self.alg.rnd_optimizer.load_state_dict(loaded_dict["rnd_optimizer_state_dict"])
@@ -675,9 +703,9 @@ class OnPolicyRunnerCustom:
         #print(f"policy_cfg test: {self.policy_cfg}")
         ###########c##############
 
-        print("I am in on policy runner.")
-        print(f"n scan on actor critic: {self.env.cfg.n_scan}")
-        print(f"n critic extra passed to actor critic in on policy: {self.env.cfg.num_critic_obs}")
+        #print("I am in on policy runner.")
+        #print(f"n scan on actor critic: {self.env.cfg.n_scan}")
+       # print(f"n critic extra passed to actor critic in on policy: {self.env.cfg.num_critic_obs}")
         if actor_critic_class_name == "ActorCriticRMA":
             actor_critic: ActorCriticRMA = actor_critic_class(obs = obs,
                                                               obs_groups = self.cfg["obs_groups"],
@@ -697,8 +725,8 @@ class OnPolicyRunnerCustom:
 
         #Added estimator
 
-        #estimator = Estimator(input_dim=self.env.cfg.n_proprio, output_dim=self.env.cfg.n_priv, hidden_dims=self.estimator_cfg["hidden_dims"]).to(self.device)
-        estimator = None
+        estimator = Estimator(input_dim=self.env.cfg.n_proprio, output_dim=self.env.cfg.n_priv, hidden_dims=self.estimator_cfg["hidden_dims"]).to(self.device)
+        #estimator = None
         #Need to add depth encoder instantiation
         ############cn################
         class_name = self.alg_cfg.pop("class_name")
