@@ -193,18 +193,19 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # obtain the trained policy for inference
     policy = runner.get_inference_policy(device=env.unwrapped.device)
 
-   
+    #This returns the function inference() to be called
+    estimator = runner.get_estimator_inference_policy(device=env.device)
 
     # extract the neural network module
     # we do this in a try-except to maintain backwards compatibility.
     try:
         # version 2.3 onwards
         policy_nn = runner.alg.policy
-        print(f"AmI here?")
+        #print(f"AmI here?")
     except AttributeError:
         # version 2.2 and below
         policy_nn = runner.alg.actor_critic
-    print("Herehere?")
+   # print("Herehere?")
     # extract the normalizer
     if hasattr(policy_nn, "actor_obs_normalizer"):
        
@@ -216,7 +217,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
        
         normalizer = None
 
-    print(f"made itpassed the norm")
+    #print(f"made itpassed the norm")
 
     # export policy to onnx/jit
     export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
@@ -237,6 +238,15 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     global_step = 0
     # simulate environment
 
+    num_prop = env_cfg.n_proprio
+    num_scan = env_cfg.n_scan
+    priv_states_dim = env_cfg.n_priv
+    num_priv_latent = env_cfg.n_priv_latent
+    history_len = env_cfg.history_len
+
+    use_hist_encoder = env_cfg.use_hist_encoder
+    use_estimator = env_cfg.use_estimator
+
     #print("made it before sim")
     while simulation_app.is_running():
         start_time = time.time()
@@ -244,9 +254,51 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         with torch.inference_mode():
             # agent stepping
            # print("Am I getting here? ")
-            actions = policy(obs)
+            actions = policy(obs,hist_encoding=use_hist_encoder)
             # env stepping
             obs, _, _, extras = env.step(actions)
+
+            if use_estimator:
+
+                actor_obs = obs.get("policy")
+                base = num_scan + priv_states_dim + num_priv_latent
+                half_prop = num_prop // 2
+                hist_offset = (history_len - 1) * half_prop
+
+            # print(f"actor_obs size: {actor_obs.shape}")
+            # print(f"actor_obs: {actor_obs}")
+
+                part1 = actor_obs[:, base + hist_offset: base + hist_offset+ half_prop]
+
+            # print(f"size of part1:{part1.shape}")
+            # print(f"part1: {part1}")
+
+                part2 = actor_obs[:, base + history_len*half_prop + hist_offset : base + history_len*half_prop + hist_offset + half_prop]
+
+                #print(f"size of part2:{part2.shape}")
+                #print(f"part2: {part2}")
+
+            
+
+                estimator_input = torch.cat([part1, part2], dim=1)
+                #print(f"forward passing estimator obs: {estimator_input}")
+                priv_states_estimated = estimator(estimator_input)
+
+            # print(f"estimator_input shape: {estimator_input.shape}")
+
+                #print(f"estimator_output shape: {priv_states_estimated.shape}")
+
+                #print(f"current velocity reading in ppo custom: {actor_obs[:, self.num_scan: self.num_scan + self.priv_states_dim]}")
+
+            
+                actor_obs[:, num_scan: num_scan + priv_states_dim] = priv_states_estimated
+
+                #print(f"velocity reading in ppo custom after estimated updated: {actor_obs[:, self.num_scan: self.num_scan + self.priv_states_dim]}")
+
+                obs["policy"] = actor_obs
+
+            # print(f"obs:  {obs['policy']}")
+
 
             if writer is not None and "log" in extras:
 

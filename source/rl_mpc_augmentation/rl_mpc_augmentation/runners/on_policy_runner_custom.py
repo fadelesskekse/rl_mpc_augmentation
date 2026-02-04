@@ -609,6 +609,13 @@ class OnPolicyRunnerCustom:
         if device is not None:
             self.alg.policy.to(device)
         return self.alg.policy.act_inference
+    
+    def get_estimator_inference_policy(self, device=None):
+        self.alg.estimator.eval() # switch to evaluation mode (dropout for example)
+        if device is not None:
+            self.alg.estimator.to(device)
+        return self.alg.estimator.inference
+
 
     def train_mode(self):
         # -- PPO

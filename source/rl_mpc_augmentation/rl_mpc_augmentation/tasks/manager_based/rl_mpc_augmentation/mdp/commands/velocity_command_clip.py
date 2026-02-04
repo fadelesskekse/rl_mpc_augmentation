@@ -49,7 +49,7 @@ class UniformVelocityCommandClip(UniformVelocityCommand):
         if max_lin_vel_x >= self.cfg.clip_start_threshold:
             vx[torch.abs(vx) < self.cfg.clip_threshold] = 0.0
             self.vel_command_b[env_ids, 0] = vx
-            print("Im clipping")
+           # print("Im clipping")
 
         if max_lin_vel_y >= self.cfg.clip_start_threshold:
             vy[torch.abs(vy) < self.cfg.clip_threshold] = 0.0

@@ -36,8 +36,12 @@ class Estimator(nn.Module):
         return self.estimator(input)
     
     def inference(self, input):
+        #print("ESTIMATOR INFERENCE IS BEING CALLED")
         with torch.no_grad():
             return self.estimator(input)
+            #output_shape = (input.shape[0], self.output_dim)
+            #print(f"output dim: {self.output_dim}")
+            #return torch.full(output_shape, 123.0, device=input.device, dtype=input.dtype)
 
 class Discriminator(nn.Module):
     def __init__(self, n_states, 

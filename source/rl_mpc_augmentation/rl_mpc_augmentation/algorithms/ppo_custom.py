@@ -180,7 +180,6 @@ class PPOCustom:
 
             actor_obs = obs_est.get("policy")
   
-
             base = self.num_scan + self.priv_states_dim + self.num_priv_latent
             half_prop = self.num_prop // 2
 

@@ -653,10 +653,23 @@ class ActorCriticRMA(nn.Module):
         self.update_distribution(obs,hist_encoding)
         return self.distribution.sample()
 
-    def act_inference(self, obs):
+    # def act_inference(self, obs):
+    #     obs = self.get_actor_obs(obs)
+    #     obs = self.actor_obs_normalizer(obs)
+    #     return self.actor(obs)
+    
+    def act_inference(self, obs, hist_encoding=False):
         obs = self.get_actor_obs(obs)
         obs = self.actor_obs_normalizer(obs)
-        return self.actor(obs)
+        return self.actor(obs,hist_encoding)
+
+    # def act_inference(self, observations, hist_encoding=False, eval=False, scandots_latent=None, **kwargs):
+    #     if not eval:
+    #         actions_mean = self.actor(observations, hist_encoding, eval, scandots_latent)
+    #         return actions_mean
+    #     else:
+    #         actions_mean, latent_hist, latent_priv = self.actor(observations, hist_encoding, eval=True)
+    #         return actions_mean, latent_hist, latent_priv
 
     def evaluate(self, obs, **kwargs):
         obs = self.get_critic_obs(obs)

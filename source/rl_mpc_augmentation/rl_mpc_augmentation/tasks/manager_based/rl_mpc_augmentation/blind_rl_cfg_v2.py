@@ -728,6 +728,10 @@ class RobotPlayEnvCfg(RlMpcAugmentationEnvCfg):
         super().__post_init__()
         self.scene.num_envs = 32
         self.episode_length_s = 20
+        
+        self.use_hist_encoder = True
+        self.use_estimator = True
+
 
 
         self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges

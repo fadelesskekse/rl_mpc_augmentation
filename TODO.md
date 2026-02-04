@@ -122,7 +122,12 @@
 
 44. Does estimator get saved between resume calls? 
 
-45. History encoder and estimator optimizers and models are not being saved? 
+45. Ensure that play properly loads the correct models
+
+46. Train with with new speed command clipping tonight.
+
+47. Tomorrow morning, try to resume with a z_accel reward
+
 
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED
