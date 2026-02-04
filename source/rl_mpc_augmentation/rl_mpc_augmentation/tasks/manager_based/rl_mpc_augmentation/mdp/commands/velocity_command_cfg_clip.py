@@ -11,4 +11,6 @@ from .velocity_command_clip import UniformVelocityCommandClip
 @configclass
 class UniformLevelVelocityCommandCfgClip(UniformLevelVelocityCommandCfg):
     clip_threshold: float = MISSING
+    clip_start_threshold: float = MISSING
+    
     class_type: type = UniformVelocityCommandClip

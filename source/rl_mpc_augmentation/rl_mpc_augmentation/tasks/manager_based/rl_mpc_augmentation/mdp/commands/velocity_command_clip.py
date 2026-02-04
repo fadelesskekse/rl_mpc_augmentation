@@ -37,13 +37,31 @@ class UniformVelocityCommandClip(UniformVelocityCommand):
         vx = self.vel_command_b[env_ids, 0]
         vy = self.vel_command_b[env_ids, 1]
 
-        print(f"vel_cmd_before_clipping: {self.vel_command_b}")
+        #print(f"vel_cmd_before_clipping: {self.vel_command_b}")
 
-        vx[vx < self.cfg.clip_threshold] = 0.0
-        vy[vy < self.cfg.clip_threshold] = 0.0
+    
+        max_lin_vel_x = self.cfg.ranges.lin_vel_x[1]
+        max_lin_vel_y = self.cfg.ranges.lin_vel_y[1]
 
-        self.vel_command_b[env_ids, 0] = vx
-        self.vel_command_b[env_ids, 1] = vy
+       # print(f"max x vel: {max_lin_vel_x}")
+
+        # Only apply clipping if max range is above clip_start_threshold
+        if max_lin_vel_x >= self.cfg.clip_start_threshold:
+            vx[torch.abs(vx) < self.cfg.clip_threshold] = 0.0
+            self.vel_command_b[env_ids, 0] = vx
+            print("Im clipping")
+
+        if max_lin_vel_y >= self.cfg.clip_start_threshold:
+            vy[torch.abs(vy) < self.cfg.clip_threshold] = 0.0
+            self.vel_command_b[env_ids, 1] = vy
+
+
+
+        # vx[vx < self.cfg.clip_threshold] = 0.0
+        # vy[vy < self.cfg.clip_threshold] = 0.0
+
+        # self.vel_command_b[env_ids, 0] = vx
+        # self.vel_command_b[env_ids, 1] = vy
 
 
         # print(f"vel_cmd_after_clipping: {self.vel_command_b}")

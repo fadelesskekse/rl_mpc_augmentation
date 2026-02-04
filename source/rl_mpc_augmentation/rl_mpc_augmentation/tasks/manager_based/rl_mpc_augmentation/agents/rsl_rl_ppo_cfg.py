@@ -9,7 +9,7 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, R
 
 from rl_mpc_augmentation.cfgs.cfgs import RslRlPpoAlgorithmCfgCustom,RslRlPpoActorCriticCfgCustom, EstimatorCfg
 
-from rl_mpc_augmentation.tasks.manager_based.rl_mpc_augmentation.blind_rl_cfg import RlMpcAugmentationEnvCfg
+#from rl_mpc_augmentation.tasks.manager_based.rl_mpc_augmentation.blind_rl_cfg import RlMpcAugmentationEnvCfg
 
 from rl_mpc_augmentation.algorithms.ppo_custom import PPOCustom
 

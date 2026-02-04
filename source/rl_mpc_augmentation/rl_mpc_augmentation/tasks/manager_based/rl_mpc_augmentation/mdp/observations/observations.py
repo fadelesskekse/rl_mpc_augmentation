@@ -110,6 +110,8 @@ def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
 
     # Euclidean norm over x,y,z -> (B, N)
     out = torch.norm(delta, dim=-1)
+
+    print(f"shape of scan_dot: {out.shape}")
     
     return out
     #return torch.ones_like(out)
