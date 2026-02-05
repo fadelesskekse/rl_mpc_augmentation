@@ -288,13 +288,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
                 #print(f"estimator_output shape: {priv_states_estimated.shape}")
 
-                #print(f"current velocity reading in ppo custom: {actor_obs[:, self.num_scan: self.num_scan + self.priv_states_dim]}")
+               # print(f"Non estimated Velocity: {actor_obs[:, num_scan: num_scan + priv_states_dim]}")
 
             
                 actor_obs[:, num_scan: num_scan + priv_states_dim] = priv_states_estimated
 
-                #print(f"velocity reading in ppo custom after estimated updated: {actor_obs[:, self.num_scan: self.num_scan + self.priv_states_dim]}")
-
+                
                 obs["policy"] = actor_obs
 
             # print(f"obs:  {obs['policy']}")

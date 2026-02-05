@@ -75,7 +75,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         prim_path="/World/ground",
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
-        #max_init_terrain_level=PLAYGROUND.num_rows - 1,
+       # max_init_terrain_level=PLAYGROUND.num_rows - 1,
         max_init_terrain_level=0,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -149,8 +149,11 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel,params={"threshold": .5})
-    lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
+    #terrain_levels = CurrTerm(func=mdp.terrain_levels_vel,params={"threshold": .5})
+    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel_v2,params={"threshold": .5})
+
+
+   # lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
 
 ##
 # MDP settings
@@ -180,27 +183,32 @@ class CommandsCfg:
     #     # ),
     # )
 
-    base_velocity = mdp.UniformLevelVelocityCommandCfgClip(
-        asset_name="robot",
-        resampling_time_range=(2, 4),
-        rel_standing_envs=0,
-        rel_heading_envs=1.0,
-        heading_command=False,
-        debug_vis=False,
-        clip_threshold=.5,
-        clip_start_threshold=1,
-        
-        ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
-        ),
-        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
-        ),
-
-        # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(1, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
-        # ),
+    walk_bool = mdp.boolCommandCfg(
+        resampling_time_range=(25, 25),
+        probability=.9, 
     )
+
+    # base_velocity = mdp.UniformLevelVelocityCommandCfgClip(
+    #     asset_name="robot",
+    #     resampling_time_range=(2, 4),
+    #     rel_standing_envs=0,
+    #     rel_heading_envs=1.0,
+    #     heading_command=False,
+    #     debug_vis=False,
+    #     clip_threshold=.5,
+    #     clip_start_threshold=1,
+        
+    #     ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+    #         lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+    #     ),
+    #     limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+    #         lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+    #     ),
+
+    #     # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+    #     #     lin_vel_x=(1, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+    #     # ),
+    # )
 
 @configclass
 class ActionsCfg:
@@ -272,7 +280,8 @@ class ObservationsCfg:
 
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, history_length = 5,noise=Unoise(n_min=-0.2, n_max=0.2),)
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05),history_length=5)
-        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
+       # velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
+        walk_bool = ObsTerm(func=mdp.generated_commands, params={"command_name": "walk_bool"},history_length=5)
         last_action = ObsTerm(func=mdp.last_action,history_length=5)
 
         gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
@@ -307,13 +316,13 @@ class ObservationsCfg:
         #         history_length=0
         # )
 
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #not sensitive
        # priv_latent = ObsTerm(func=mdp.priv_latent, history_length=0)
-        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1)
-        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1)
-        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass,params={"asset_cfg": SceneEntityCfg("robot", body_names="torso_link")}, history_length=0,scale=1)
-        priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0,scale=1)
-        priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0,scale=1)
+        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1)#not sensitive
+        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1)#not sensitive
+        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass,params={"asset_cfg": SceneEntityCfg("robot", body_names="torso_link")}, history_length=0,scale=1)#not sensitive
+        priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0,scale=1)#not sensitive
+        priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0,scale=1)#not sensitive
 
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,history_length=10)
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, history_length=10,scale=0.05,)
@@ -321,14 +330,15 @@ class ObservationsCfg:
         ########END EXTREME PARKOUS OBS#################
 
         
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2,history_length=5)
-        projected_gravity = ObsTerm(func=mdp.projected_gravity,history_length=5)
-        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2,history_length=5) #sensitive
+        projected_gravity = ObsTerm(func=mdp.projected_gravity,history_length=5) #sensitive
+        #velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5) #sensitive
+        walk_bool = ObsTerm(func=mdp.generated_commands, params={"command_name": "walk_bool"},history_length=5)
         last_action = ObsTerm(func=mdp.last_action,history_length=5)
         # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
         #                                                     "offset": [0,.5],
         #                                                     })
-        gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
+        gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={ #NOT SENSITIVE
                                                             "offset": [0,.5],
                                                             },history_length=5)
 
@@ -354,8 +364,8 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.3, 1.0),
-            "dynamic_friction_range": (0.3, 1.0),
+            "static_friction_range": (0.3, 1), #was .3 to 1
+            "dynamic_friction_range": (0.3, 1),
             "restitution_range": (0.0, 0.0),
             "num_buckets": 64,
             "make_consistent":True,
@@ -367,9 +377,10 @@ class EventCfg:
     add_base_mass = EventTerm(
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
+        #interval_range_s=(.48, .48),
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "mass_distribution_params": (.8, 1.2),
+            "mass_distribution_params": (.8, 1.2), #was .8 to 1.2
             "operation": "scale",
         },
     )
@@ -391,7 +402,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "stiffness_distribution_params":(.8,1.2),
+            "stiffness_distribution_params":(.8,1.2), #was .8 to 1.2
             "damping_distribution_params": (.8,1.2),
             "operation": "scale"
         },
@@ -447,11 +458,11 @@ class EventCfg:
     #Justification: Improve robustness by pushing robot at random
     # interval
     push_robot = EventTerm(
-        func=mdp.push_by_setting_velocity_delayed,
+        func=mdp.push_by_setting_velocity,
         mode="interval",
-        interval_range_s=(1, 20),
-        params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)},"curr_lim":.8}
-                #"delayed_iteration": 1000},
+        interval_range_s=(.25, 20),
+        params={"velocity_range": {"x": (-.5, .5), "y": (-.5, .5)}} #was +-.5
+               
     )
 
 
@@ -463,26 +474,44 @@ class RewardsCfg:
 
     # (1) Constant running reward
     alive = RewTerm(func=mdp.is_alive, weight=.15)
+
     
     # (2) Track yaw frame linear velocity commands in XY Plane
     #Justification: Need to track a body frame velocity
-    track_lin_vel_xy = RewTerm(
-        func=mdp.track_lin_vel_xy_yaw_frame_exp,
-        weight=3,#was 1.5
-        params={"command_name": "base_velocity", 
-                "std": math.sqrt(0.25)},
-    )
+    # track_lin_vel_xy = RewTerm(
+    #     func=mdp.track_lin_vel_xy_yaw_frame_exp,
+    #     weight=3,#was 1.5
+    #     params={"command_name": "base_velocity", 
+    #             "std": math.sqrt(0.25)},
+    # )
+
+    x_vel = RewTerm(func=mdp.lin_vel_x,
+                    weight=1,  
+                    params={"command_name": "walk_bool", 
+                        }         
+                     )
+    
+    is_terminated = RewTerm(func=mdp.is_terminated,
+                            weight = -5)
 
 
 
     # (3) Track yaw angular velocity command
     #Justification: Need to track 0 angular velocity to 
         #keep robot pointed in direction it started in 
-    track_ang_vel_z = RewTerm(
-        func=mdp.track_ang_vel_z_exp, 
+    # track_ang_vel_z = RewTerm(
+    #     func=mdp.track_ang_vel_z_exp, 
+    #     weight=2.5, 
+    #     params={"command_name": "base_velocity", 
+    #             "std": math.sqrt(0.25)}
+    # )
+
+    ang_vel_z = RewTerm(
+        func=mdp.ang_vel_z_exp, 
         weight=2.5, 
-        params={"command_name": "base_velocity", 
-                "std": math.sqrt(0.25)}
+        params={
+                "std": math.sqrt(0.25),
+                }
     )
 
     # (4) Minimize angular velocity in XY plane
@@ -544,7 +573,7 @@ class RewardsCfg:
     )
     joint_deviation_legs = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1.25,
+        weight=-1.1,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
     )
 
@@ -582,14 +611,26 @@ class RewardsCfg:
     #     },
     # )
 
+    # gait = RewTerm(
+    #     func=mdp.gait,
+    #     weight=0.5,
+    #     params={
+    #         #"period": 0.6,
+    #         "offset": [0.0, 0.5],
+    #         "threshold": 0.55,
+    #         "command_name": "base_velocity",
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+    #     },
+    # )
+
     gait = RewTerm(
-        func=mdp.gait,
+        func=mdp.gait_no_vel_cmd,
         weight=0.5,
         params={
             #"period": 0.6,
             "offset": [0.0, 0.5],
             "threshold": 0.55,
-            "command_name": "base_velocity",
+            "command_name": "walk_bool",
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
         },
     )
@@ -696,7 +737,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
         # self.observations.critic.joint_vel_rel.history_length=self.history_len
 
         self.decimation = 4
-        self.episode_length_s = 7
+        self.episode_length_s = 20
         # viewer settings
         self.viewer.eye = (8.0, 0.0, 5.0)
         # simulation settings
@@ -728,11 +769,10 @@ class RobotPlayEnvCfg(RlMpcAugmentationEnvCfg):
         super().__post_init__()
         self.scene.num_envs = 32
         self.episode_length_s = 20
-        
-        self.use_hist_encoder = True
+
+        self.use_hist_encoder = False
         self.use_estimator = True
 
 
-
-        self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
+        #self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
 

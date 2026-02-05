@@ -122,11 +122,12 @@
 
 44. Does estimator get saved between resume calls? 
 
-45. Ensure that play properly loads the correct models
 
-46. Train with with new speed command clipping tonight.
-
-47. Tomorrow morning, try to resume with a z_accel reward
+46. I can either:
+    - Tonight: Train with massively varied gains and frictions
+    - Get sim2sim setup
+    - Get scan dots working
+    
 
 
 ####################################################

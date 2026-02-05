@@ -55,6 +55,7 @@ def gait_cycle_var(
 
 
     return leg_phase
+    #return torch.zeros_like(leg_phase)
 
 def gait_cycle(
     env: ManagerBasedRLEnv,
@@ -185,16 +186,18 @@ def priv_latent_gains_stiffness(
 
     # avoid divide-by-zero just in case
     eps = 1e-6
-    scale = 0.1 * stiffness_default + eps
+    scale = 0.8 * stiffness_default + eps
 
     stiffness_norm = (stiffness - stiffness_default) / scale
 
+    #print(f"stiffness: {stiffness_norm}")
+
    # print(f"stiffness_default: {stiffness_default}")
 
-   # print(f"stiffness random: {stiffness}")
+  # print(f"stiffness random: {stiffness}")
 
     return stiffness_norm
-    
+    #return torch.ones_like(stiffness_norm)*100
 
 def priv_latent_gains_damping(
     env: ManagerBasedEnv,
@@ -210,12 +213,13 @@ def priv_latent_gains_damping(
 
     # avoid divide-by-zero just in case
     eps = 1e-6
-    scale = 0.2 * damping_default + eps
+    scale = 0.8 * damping_default + eps
 
     damping_norm = (damping - damping_default) / scale
     #print(f"damping_norm: {damping_norm}")
 
     return damping_norm
+    #return torch.ones_like(damping_norm)*100
 
 
 def priv_latent_mass(
@@ -242,13 +246,16 @@ def priv_latent_mass(
 
     # avoid divide-by-zero just in case
     eps = 1e-6
-    scale = 0.2 * mass_default + eps
+    scale = 0.8 * mass_default + eps
 
     mass_norm = (mass - mass_default) / scale
 
-    #print(f"mass norm {mass_norm}")
+   # print(f"mass norm {mass_norm}")
 
     return mass_norm
+    #return torch.ones_like(mass_norm)*100
+
+    
 
 def priv_latent_com(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
 
@@ -261,6 +268,9 @@ def priv_latent_com(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntit
    # return torch.ones_like(com)
 
     return com
+    #return torch.ones_like(com)*100
+
+    
 
 def priv_latent_friction(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
 
@@ -268,6 +278,9 @@ def priv_latent_friction(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = Scene
 
     friction_left = asset.root_physx_view.get_material_properties()[:, 9:16]
     friction_right = asset.root_physx_view.get_material_properties()[:, 16:23]
+
+    #print(f"left friction during observation: {friction_left}")
+   # print(f"right friction during observation: {friction_right}")
 
     friction_left  = friction_left[:, :, :2]     # (num_envs, 7, 2)
     friction_right = friction_right[:, :, :2]    # (num_envs, 7, 2)
@@ -285,9 +298,8 @@ def priv_latent_friction(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = Scene
         dim=-1
     )
 
-    #return torch.ones_like(priv)
+    #return torch.ones_like(priv)*0
 
     return priv
-
 
 

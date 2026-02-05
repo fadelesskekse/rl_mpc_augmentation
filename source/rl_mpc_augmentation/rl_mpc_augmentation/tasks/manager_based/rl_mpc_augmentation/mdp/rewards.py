@@ -77,6 +77,52 @@ def gait(
         reward *= cmd_norm > 0.1
     return reward
 
+def gait_no_vel_cmd(
+    env: ManagerBasedRLEnv,
+    offset: list[float],
+    sensor_cfg: SceneEntityCfg,
+    nominal: float = .5,
+    threshold: float = 0.5,
+    command_name=None,
+) -> torch.Tensor:
+    
+    
+    period = env.action_manager.get_term("gait_cycle").processed_actions
+    
+
+    eps = nominal # or any small positive value
+    period = torch.where(period == 0, eps, period)
+
+   # print(f"period in reward: {period}")
+
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    is_contact = contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids] > 0
+
+    elapsed_time = (env.episode_length_buf * env.step_dt).unsqueeze(1) 
+
+    global_phase = (elapsed_time % period) / period    
+
+
+    #print(f"global_phase in gait reward: {global_phase}")
+    phases = []
+    for offset_ in offset:
+        phase = (global_phase + offset_) % 1.0
+        phases.append(phase)
+    leg_phase = torch.cat(phases, dim=-1)
+
+
+    reward = torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+    for i in range(len(sensor_cfg.body_ids)):
+        is_stance = leg_phase[:, i] < threshold
+        reward += ~(is_stance ^ is_contact[:, i])
+
+    if command_name is not None:
+        walk_bool = env.command_manager.get_command(command_name)[:, 0]
+        reward *= walk_bool == 1
+
+       # print(f"walk bool in gait rew: {walk_bool}")
+    return reward
+
 
 def gait_deviation(env: ManagerBasedRLEnv,
                    nominal: float = .5,) -> torch.Tensor:
@@ -143,3 +189,41 @@ def body_lin_acc_l2_z(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneE
 
     # L2 kernel → square it
     return torch.sum(torch.square(z_acc), dim=1)
+
+
+def lin_vel_x(
+    env: ManagerBasedRLEnv,
+    command_name: str,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+    x_vel = asset.data.root_lin_vel_b[:, 0]
+
+    walk_bool = env.command_manager.get_command(command_name)[:, 0]
+
+    reward = torch.where(
+        walk_bool == True,
+        x_vel,
+        -torch.abs(x_vel)
+    )
+
+   # print(f"Walk_bool: {walk_bool}")
+   # print(f"x_vel{x_vel}")
+    #print(f"reward to be scaled: {reward}")
+    
+    return reward
+
+
+
+def ang_vel_z_exp(
+    env: ManagerBasedRLEnv, std: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Reward tracking of angular velocity commands (yaw) using exponential kernel."""
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+    # compute the error
+    ang_vel_error = torch.square(asset.data.root_ang_vel_b[:, 2])
+    return torch.exp(-ang_vel_error / std**2)
+
+

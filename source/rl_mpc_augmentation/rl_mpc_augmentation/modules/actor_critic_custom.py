@@ -217,12 +217,14 @@ class Actor(nn.Module):
            # print(f"hist_encoding: {hist_encoding}")
             if hist_encoding:
                 latent = self.infer_hist_latent(obs)
+               # print("I am using hist encoder")
 
                 
 
             else:
 
                 latent = self.infer_priv_latent(obs)
+               # print("I am using priv encoder")
                  # Adaptation module update
                # with torch.inference_mode():
                    # print(f"priv latenet: {self.infer_priv_latent(obs)}")
@@ -660,6 +662,8 @@ class ActorCriticRMA(nn.Module):
     
     def act_inference(self, obs, hist_encoding=False):
         obs = self.get_actor_obs(obs)
+       # print(f"Estimated Velocity: {obs[:, :3]}")
+
         obs = self.actor_obs_normalizer(obs)
         return self.actor(obs,hist_encoding)
 

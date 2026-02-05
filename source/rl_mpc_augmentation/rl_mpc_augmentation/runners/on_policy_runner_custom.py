@@ -418,7 +418,7 @@ class OnPolicyRunnerCustom:
             self.writer.add_scalar(f"Loss/{key}", value, locs["it"])
 
        # print(f"mean_hist: {locs['mean_hist_latent_loss']}")
-       # self.writer.add_scalar(f"Loss/hist_latent_loss", locs['mean_hist_latent_loss'], locs["it"])
+        self.writer.add_scalar(f"Loss/hist_latent_loss", locs['mean_hist_latent_loss'], locs["it"])
 
         #for key, value in locs["mean_hist_latent_loss"].items():
             #self.writer.add_scalar(f"Loss/{key}", value, locs["it"])
