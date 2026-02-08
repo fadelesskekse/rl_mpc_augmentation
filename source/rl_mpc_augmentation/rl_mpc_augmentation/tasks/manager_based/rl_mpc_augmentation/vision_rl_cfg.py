@@ -273,9 +273,10 @@ class ObservationsCfg:
 
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
         
-        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1)
-        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1)
-        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass,params={"asset_cfg": SceneEntityCfg("robot", body_names="torso_link")}, history_length=0,scale=1,)
+        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1,params={"scale_val": .2})
+        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1,params={"scale_val": .2})
+        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass,params={"asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+                                                                     "scale_val": .2}, history_length=0,scale=1,)
         priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0)
         priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0)
 
@@ -326,9 +327,10 @@ class ObservationsCfg:
 
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #not sensitive
        # priv_latent = ObsTerm(func=mdp.priv_latent, history_length=0)
-        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1)#not sensitive
-        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1)#not sensitive
-        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass,params={"asset_cfg": SceneEntityCfg("robot", body_names="torso_link")}, history_length=0,scale=1)#not sensitive
+        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1,params={"scale_val": .2})#not sensitive
+        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1,params={"scale_val": .2})#not sensitive
+        priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass,params={"asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+                                                                     "scale_val": .2}, history_length=0,scale=1)#not sensitive
         priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0,scale=1)#not sensitive
         priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0,scale=1)#not sensitive
 

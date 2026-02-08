@@ -227,6 +227,7 @@ def priv_latent(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg
 def priv_latent_gains_stiffness(
     env: ManagerBasedEnv,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    scale_val: float = .2,
 ) -> torch.Tensor:
 
     asset: Articulation = env.scene[asset_cfg.name]
@@ -236,7 +237,7 @@ def priv_latent_gains_stiffness(
 
     # avoid divide-by-zero just in case
     eps = 1e-6
-    scale = 0.2 * stiffness_default + eps
+    scale = scale_val * stiffness_default + eps
 
     stiffness_norm = (stiffness - stiffness_default) / scale
 
@@ -252,6 +253,7 @@ def priv_latent_gains_stiffness(
 def priv_latent_gains_damping(
     env: ManagerBasedEnv,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    scale_val: float = .2,
 ) -> torch.Tensor:
 
     asset: Articulation = env.scene[asset_cfg.name]
@@ -263,7 +265,7 @@ def priv_latent_gains_damping(
 
     # avoid divide-by-zero just in case
     eps = 1e-6
-    scale = 0.2 * damping_default + eps
+    scale = scale_val * damping_default + eps
 
     damping_norm = (damping - damping_default) / scale
     #print(f"damping_norm: {damping_norm}")
@@ -275,6 +277,7 @@ def priv_latent_gains_damping(
 def priv_latent_mass(
     env: ManagerBasedEnv,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    scale_val: float = .2,
 ) -> torch.Tensor:
 
     asset: Articulation = env.scene[asset_cfg.name]
@@ -296,7 +299,7 @@ def priv_latent_mass(
 
     # avoid divide-by-zero just in case
     eps = 1e-6
-    scale = 0.2 * mass_default + eps
+    scale = scale_val * mass_default + eps
 
     mass_norm = (mass - mass_default) / scale
 
