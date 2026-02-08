@@ -33,8 +33,8 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
     border_width=2.0,
     num_rows=10,
     num_cols=3,
-    horizontal_scale=.025,
-    vertical_scale=.025,#.005
+    horizontal_scale=.1,
+    vertical_scale=.05,#.005
     slope_threshold=0.75,
     difficulty_range=(0.0, 1.0),
     use_cache=False,
@@ -715,7 +715,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
 
-        self.sim.physx.gpu_collision_stack_size = 150_000_000
+        self.sim.physx.gpu_collision_stack_size = 155_000_000
         self.sim.physics_material = self.scene.terrain.physics_material
         self.sim.physx.gpu_max_rigid_patch_count = 10 * 2**15
 

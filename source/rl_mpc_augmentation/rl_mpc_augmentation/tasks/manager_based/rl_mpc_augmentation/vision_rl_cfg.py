@@ -34,10 +34,10 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0),
     border_width=2.0,
     border_height=0,
-    num_rows=10,
+    num_rows=8,
     num_cols=4,
-    horizontal_scale=.025,
-    vertical_scale=.025,#.005
+    horizontal_scale=.1,
+    vertical_scale=.05,#.005
     slope_threshold=0.75,
     difficulty_range=(0.0, 1.0),
     use_cache=False,
@@ -45,13 +45,14 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
         "stairs_up": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(step_height_range = (.01,.17),
                                                         step_width = .3,
                                                         border_width=1.0,
-                                                        platform_width=1.5,
+                                                        platform_width=1.5,                             
                                                         proportion = .25,),
 
         "stairs_down": terrain_gen.MeshPyramidStairsTerrainCfg(step_height_range = (.01,.17),
                                                         step_width = .3,
                                                         border_width=1.0,
                                                         platform_width=1.25,
+                                                        
                                                         proportion = .25,),
 
         "rough_flat": terrain_gen.MeshRandomGridTerrainCfg(proportion = .25,
@@ -59,13 +60,23 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
                                                            grid_width = .75,
                                                            platform_width = .75,),
 
+        # "stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(proportion=.25,
+        #                                                           
+        #                                                           stone_height_max = 0,
+        #                                                           stone_distance_range= (.025,.3),
+        #                                                           stone_width_range= (.3,.45),
+        #                                                           platform_width=.75,
+        #                                                           border_width=1.0,
+        #                                                           holes_depth=-1),
+
         "stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(proportion=.25,
-                                                                  stone_height_max = 0,
-                                                                  stone_distance_range= (.025,.3),
-                                                                  stone_width_range= (.3,.45),
+                                                                  
+                                                                  stone_height_max = .05,
+                                                                  stone_distance_range= (.1,.4),
+                                                                  stone_width_range= (.5,.7),
                                                                   platform_width=.75,
                                                                   border_width=1.0,
-                                                                  holes_depth=-20),
+                                                                  holes_depth=-8),
                                                         
     },
 )
@@ -677,7 +688,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": -15})
+    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": -5})
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
     course_complete = DoneTerm(func=mdp.sub_terrain_out_of_bounds, params={
         "distance_buffer": 0,
@@ -740,7 +751,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
 
-        self.sim.physx.gpu_collision_stack_size = 150_000_000
+        self.sim.physx.gpu_collision_stack_size = 155_000_000
         self.sim.physics_material = self.scene.terrain.physics_material
         self.sim.physx.gpu_max_rigid_patch_count = 10 * 2**15
 
