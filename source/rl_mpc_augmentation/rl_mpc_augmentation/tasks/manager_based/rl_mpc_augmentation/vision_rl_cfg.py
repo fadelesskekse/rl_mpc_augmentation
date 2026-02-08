@@ -65,7 +65,7 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
                                                                   stone_width_range= (.3,.45),
                                                                   platform_width=.75,
                                                                   border_width=1.0,
-                                                                  holes_depth=-1),
+                                                                  holes_depth=-20),
                                                         
     },
 )
@@ -78,8 +78,8 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         prim_path="/World/ground",
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
-        max_init_terrain_level=PLAYGROUND.num_rows - 1,
-        #max_init_terrain_level=0,
+        #max_init_terrain_level=PLAYGROUND.num_rows - 1,
+        max_init_terrain_level=0,
         
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -139,7 +139,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         )[0].tolist())
     ),
     ray_alignment="yaw",
-    max_distance=4,
+    max_distance=7,
 
 
 
@@ -619,7 +619,7 @@ class RewardsCfg:
 
     gait = RewTerm(
         func=mdp.gait,
-        weight=1,
+        weight=1.5,
         params={
             #"period": 0.6,
             "offset": [0.0, 0.5],
@@ -675,7 +675,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    #base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.2})
+    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": -15})
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
     course_complete = DoneTerm(func=mdp.sub_terrain_out_of_bounds, params={
         "distance_buffer": 0,
