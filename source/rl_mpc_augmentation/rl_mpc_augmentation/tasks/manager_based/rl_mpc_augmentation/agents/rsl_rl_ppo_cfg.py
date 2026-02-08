@@ -122,7 +122,7 @@ class PPORunnerCfgCustom(RslRlOnPolicyRunnerCfg):
         max_grad_norm=1.0,
         # dagger params
         dagger_update_freq = 20,
-        priv_reg_coef_schedual = [0, 0.1, 0, 1],#[0, 0.1, 2000, 3000],
+        priv_reg_coef_schedual = [0, 0.1, 2000, 3000],#[0, 0.1, 2000, 3000],
         priv_reg_coef_schedual_resume = [0, 0.1, 0, 1],
     )
 
