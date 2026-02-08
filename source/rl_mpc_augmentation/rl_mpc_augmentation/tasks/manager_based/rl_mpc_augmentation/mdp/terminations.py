@@ -63,6 +63,8 @@ def sub_terrain_out_of_bounds(
         x_out_of_bounds = torch.abs(asset.data.root_pos_w[:, 0]  - env_origins[:,0]) > grid_width/2 + distance_buffer
         y_out_of_bounds = torch.abs(asset.data.root_pos_w[:, 1]  - env_origins[:,1]) > grid_length/2 + distance_buffer
 
+       # print(f"grid_wwidth: {grid_width}")
+        #print(f"grid_length: {grid_length}")
         # if torch.any(x_out_of_bounds):
         #     print("//////////////////////////////////////////////////////////////////")
         #     print(f"x_out_of_bounds: {x_out_of_bounds.nonzero(as_tuple=True)[0]}")

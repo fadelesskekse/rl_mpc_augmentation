@@ -85,37 +85,87 @@ def gait_cycle(
     return leg_phase
 
 
-def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+# def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg,asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
 
- 
-    # extract the used quantities (to enable type-hinting)
+#    # asset: Articulation = env.scene[asset_cfg.name]
+
+#     #sensor_pos = asset.data.body_link_pose_w[:,asset_cfg.body_ids, :3]
+
+#    # print(f"sensor pose from asset: {sensor_pos}")
+
+
+#     sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
+#     # Now safe to access
+#     ray_hit = sensor.data.ray_hits_w 
+#     ray_hit = torch.where(torch.isinf(ray_hit), torch.zeros_like(ray_hit), ray_hit)
+    
+#     #*sensor.cfg.max_distance
+#     sensor_start = sensor.data.pos_w[:, None, :]
+
+#    # print(f"sensor pos world from sensor cfg: {sensor_start}")
+#    # print(f"ray hit from sensor cfg: {ray_hit}")
+    
+#     # Replace NaN with zeros
+#     #ray_hit = torch.where(torch.isnan(ray_hit), torch.zeros_like(ray_hit), ray_hit)
+#     #sensor_start = torch.where(torch.isnan(sensor_start), torch.zeros_like(sensor_start), sensor_start)
+    
+#     delta = ray_hit - sensor_start
+#     out = torch.norm(delta, dim=-1)
+#     out_avg = out.mean(dim=-1, keepdim=True)  # (num_envs, 1)
+#    # sensor_start_avg = sensor_start.mean(dim=1)
+#    # ray_hit_avg = ray_hit.mean(dim=1)
+
+#     print(f"start: {sensor_start}")
+#     print(f"ray_hit: {ray_hit}")
+#     print(f"delta {delta}")
+#     print(f"out {out}")
+#     print(f"average out: {out_avg}")
+#     #print(f"average ray_hit: {ray_hit_avg}")
+#     #print(f"average sensor_start: {sensor_start_avg}")
+    
+#     #out = torch.where(torch.isnan(out), torch.zeros_like(out), out)
+    
+#     return out
+
+def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+
     sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
-
-    #print(f"sensor data count: {sensor.num_instances}") #One scan_dot sensor
-    data = sensor.data
-
-    # (B, N, 3) - (B, 1, 3) -> (B, N, 3)
-    delta = sensor.data.ray_hits_w - sensor.data.pos_w[:, None, :]
-   # print(f"sensor pos world: {sensor.data.pos_w[:, None, :]}")
-   # print(f"sensor pos world shape: {sensor.data.pos_w[:, None, :].shape}")
-
-    #print(f"sensor.data.ray_hits_w : {sensor.data.ray_hits_w }")
-   # print(f"sensor.data.ray_hits_w shape : {sensor.data.ray_hits_w.shape}")
     
-
-
-
-
-
-  #  print(f"delta shape: {delta.shape}")
-
-    # Euclidean norm over x,y,z -> (B, N)
-    out = torch.norm(delta, dim=-1)
-
-    print(f"shape of scan_dot: {out.shape}")
+    ray_hit = sensor.data.ray_hits_w 
+    sensor_start = sensor.data.pos_w[:, None, :]
     
-    return out
-    #return torch.ones_like(out)
+    # Check which rays missed (have inf values)
+    is_miss = torch.isinf(ray_hit).any(dim=-1)  # (num_envs, num_rays)
+    
+    # Replace inf with zeros temporarily for calculation
+    ray_hit = torch.where(torch.isinf(ray_hit), torch.zeros_like(ray_hit), ray_hit)
+    
+    delta = ray_hit - sensor_start
+    out = torch.norm(delta, dim=-1)  # (num_envs, num_rays)
+    
+    # For missed rays, set distance to max_distance
+    out = torch.where(is_miss, torch.full_like(out, sensor.cfg.max_distance), out)
+
+    
+  #  out_avg = out.mean(dim=-1, keepdim=True)
+
+   # print(f"start: {sensor_start}")
+   # print(f"ray_hit: {ray_hit}")
+   # print(f"delta: {delta}")
+   # print(f"out: {out}")
+   # print(f"average out: {out_avg}")
+
+    out_normalized = 1.0 - (out / sensor.cfg.max_distance)
+    out_normalized = torch.clamp(out_normalized, 0.0, 1.0)
+
+    #out_avg = out_normalized.mean(dim=-1, keepdim=True)
+
+   # print(f"out avg: {out_avg}")
+
+
+    #return torch.zeros_like(out_normalized)
+    return out_normalized
+   
 
 def priv_latent(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
 
@@ -186,7 +236,7 @@ def priv_latent_gains_stiffness(
 
     # avoid divide-by-zero just in case
     eps = 1e-6
-    scale = 0.8 * stiffness_default + eps
+    scale = 0.2 * stiffness_default + eps
 
     stiffness_norm = (stiffness - stiffness_default) / scale
 
@@ -213,7 +263,7 @@ def priv_latent_gains_damping(
 
     # avoid divide-by-zero just in case
     eps = 1e-6
-    scale = 0.8 * damping_default + eps
+    scale = 0.2 * damping_default + eps
 
     damping_norm = (damping - damping_default) / scale
     #print(f"damping_norm: {damping_norm}")
@@ -246,7 +296,7 @@ def priv_latent_mass(
 
     # avoid divide-by-zero just in case
     eps = 1e-6
-    scale = 0.8 * mass_default + eps
+    scale = 0.2 * mass_default + eps
 
     mass_norm = (mass - mass_default) / scale
 

@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import math
+import torch
 
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 import isaaclab.sim as sim_utils
@@ -23,6 +24,7 @@ from isaaclab.sensors import ContactSensorCfg #CameraCfg, TiledCameraCfg
 from isaaclab.sensors.ray_caster import RayCasterCfg, patterns
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.utils import configclass
+from isaaclab.utils.math import quat_from_euler_xyz
 
 from . import mdp
 
@@ -31,8 +33,9 @@ from assets.g1.g1_bm import G1_BM_CFG # pyright: ignore[reportMissingImports]
 PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0),
     border_width=2.0,
+    border_height=0,
     num_rows=10,
-    num_cols=3,
+    num_cols=4,
     horizontal_scale=.025,
     vertical_scale=.025,#.005
     slope_threshold=0.75,
@@ -43,26 +46,26 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
                                                         step_width = .3,
                                                         border_width=1.0,
                                                         platform_width=1.5,
-                                                        proportion = .33,),
+                                                        proportion = .25,),
 
         "stairs_down": terrain_gen.MeshPyramidStairsTerrainCfg(step_height_range = (.01,.17),
                                                         step_width = .3,
                                                         border_width=1.0,
                                                         platform_width=1.25,
-                                                        proportion = .33,),
+                                                        proportion = .25,),
 
-        "rough_flat": terrain_gen.MeshRandomGridTerrainCfg(proportion = .33,
+        "rough_flat": terrain_gen.MeshRandomGridTerrainCfg(proportion = .25,
                                                            grid_height_range = (.01,.125),
                                                            grid_width = .75,
                                                            platform_width = .75,),
 
-        # "stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(proportion=.25,
-        #                                                           stone_height_max = 0,
-        #                                                           stone_distance_range= (.025,.3),
-        #                                                           stone_width_range= (.3,.45),
-        #                                                           platform_width=.75,
-        #                                                           border_width=1.0,
-        #                                                           holes_depth=-1),
+        "stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(proportion=.25,
+                                                                  stone_height_max = 0,
+                                                                  stone_distance_range= (.025,.3),
+                                                                  stone_width_range= (.3,.45),
+                                                                  platform_width=.75,
+                                                                  border_width=1.0,
+                                                                  holes_depth=-1),
                                                         
     },
 )
@@ -75,8 +78,9 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         prim_path="/World/ground",
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
-       # max_init_terrain_level=PLAYGROUND.num_rows - 1,
-        max_init_terrain_level=0,
+        max_init_terrain_level=PLAYGROUND.num_rows - 1,
+        #max_init_terrain_level=0,
+        
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -122,34 +126,45 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
     # ),
     # )
 
-    # # # sensors
-    # scan_dot = RayCasterCfg(
-    # prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link",
-    # #offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-    # ray_alignment="yaw",
+    # # sensors
+    scan_dot = RayCasterCfg(
+    prim_path="{ENV_REGEX_NS}/Robot/torso_link",
+    offset=RayCasterCfg.OffsetCfg(
+       pos=(.9, 0.01753, 0.42987),#0.0576235, 0.01753, 0.42987
+       #rot=(0.9238795, 0, 0.3826834, 0)
+        rot=tuple(quat_from_euler_xyz(
+            torch.tensor([0]), 
+            torch.tensor([0]), #-0.8307767239493009
+            torch.tensor([0])
+        )[0].tolist())
+    ),
+    ray_alignment="yaw",
+    max_distance=4,
 
-    # # pattern_cfg=patterns.PinholeCameraPatternCfg(
-    # # focal_length=.193,
-    # # horizontal_aperture=.384,
-    # # vertical_aperture=.24,
-    # # width=424,
-    # # height=240,),
 
-    # pattern_cfg=patterns.GridPatternCfg(
-    #     resolution=.196, #in meters, length then width
-    #     size=(1.625,2.6), #in meters,length then width
-    # ),
 
-    # debug_vis=True,
-    # update_period=1/60,
-    # mesh_prim_paths=["/World/ground"],
-    # )
+    # pattern_cfg=patterns.PinholeCameraPatternCfg(
+    # focal_length=.193,
+    # horizontal_aperture=.384,
+    # vertical_aperture=.24,
+    # width=424,
+    # height=240,),
+
+    pattern_cfg=patterns.GridPatternCfg(
+        resolution=.196, #in meters, length then width #was .196
+        size=(1.625,2.6), #in meters,length then width
+    ),
+
+    debug_vis=False,
+    #update_period=1/50,
+    mesh_prim_paths=["/World/ground"],
+    )
 
 @configclass
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel,params={"threshold": .5})
+    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel,params={"threshold": .45})
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
 
 ##
@@ -182,8 +197,8 @@ class CommandsCfg:
 
     base_velocity = mdp.UniformLevelVelocityCommandCfgClip(
         asset_name="robot",
-        resampling_time_range=(2, 4),
-        rel_standing_envs=0,
+        resampling_time_range=(2, 12),
+        rel_standing_envs=0.05,
         rel_heading_envs=1.0,
         heading_command=False,
         debug_vis=False,
@@ -222,7 +237,7 @@ class ActionsCfg:
         asset_name="robot",
         num_vars = 1,
         var_names = ["gait_cycle",],
-        clip = {"gait_cycle": (.4, 2)}
+        clip = {"gait_cycle": (.3, 2)}
         )
 
 @configclass
@@ -245,13 +260,14 @@ class ObservationsCfg:
         #######EXTREME PARKOUR OBS####################
 
         # # # observation terms (order preserved)
-        # scan_dot = ObsTerm(func=mdp.scan_dot, 
-        #         scale = .2,
-        #         params={
-        #             "sensor_cfg": SceneEntityCfg("scan_dot",),
-        #         },
-        #         history_length=0
-        # )
+        scan_dot = ObsTerm(func=mdp.scan_dot, 
+                scale = 1,
+                params={
+                    "sensor_cfg": SceneEntityCfg("scan_dot",),
+                    #"asset_cfg": SceneEntityCfg("robot", body_names=".*torso_link.*")
+                },
+                history_length=0
+        )
 
 
 
@@ -299,13 +315,14 @@ class ObservationsCfg:
         #######EXTREME PARKOUR OBS####################
 
         # # # # observation terms (order preserved)
-        # scan_dot = ObsTerm(func=mdp.scan_dot, 
-        #         scale = .2,
-        #         params={
-        #             "sensor_cfg": SceneEntityCfg("scan_dot",),
-        #         },
-        #         history_length=0
-        # )
+        scan_dot = ObsTerm(func=mdp.scan_dot, 
+                scale = .1,
+                params={
+                    "sensor_cfg": SceneEntityCfg("scan_dot",),
+                   # "asset_cfg": SceneEntityCfg("robot", body_names=".*torso_link.*"),
+                },
+                history_length=0
+        )
 
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #not sensitive
        # priv_latent = ObsTerm(func=mdp.priv_latent, history_length=0)
@@ -354,8 +371,8 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.1, 1.5), #was .3 to 1
-            "dynamic_friction_range": (0.1, 1.5),
+            "static_friction_range": (0.3, 1), #was .3 to 1
+            "dynamic_friction_range": (0.3, 1),
             "restitution_range": (0.0, 0.0),
             "num_buckets": 64,
             "make_consistent":True,
@@ -370,7 +387,7 @@ class EventCfg:
         #interval_range_s=(.48, .48),
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "mass_distribution_params": (.2, 1.8), #was .8 to 1.2
+            "mass_distribution_params": (.8, 1.2), #was .8 to 1.2
             "operation": "scale",
         },
     )
@@ -392,8 +409,8 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "stiffness_distribution_params":(.2,1.8), #was .8 to 1.2
-            "damping_distribution_params": (.2,1.8),
+            "stiffness_distribution_params":(.8,1.2), #was .8 to 1.2
+            "damping_distribution_params": (.8,1.2),
             "operation": "scale"
         },
     )
@@ -464,6 +481,18 @@ class RewardsCfg:
 
     # (1) Constant running reward
     alive = RewTerm(func=mdp.is_alive, weight=.15)
+
+    # scan_target = RewTerm(
+    #     func=mdp.scan_dot_avg_reward,
+    #     weight=.25,
+    #     params={
+    #         "sensor_cfg": SceneEntityCfg("scan_dot"),
+    #         "target": 0.4,   # Target normalized distance
+    #         "std": 0.158,      # Controls reward sharpness
+    #     },
+    # )
+
+
     
     # (2) Track yaw frame linear velocity commands in XY Plane
     #Justification: Need to track a body frame velocity
@@ -590,7 +619,7 @@ class RewardsCfg:
 
     gait = RewTerm(
         func=mdp.gait,
-        weight=0.5,
+        weight=1,
         params={
             #"period": 0.6,
             "offset": [0.0, 0.5],
@@ -674,7 +703,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     terminations: TerminationsCfg = TerminationsCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
 
-    n_scan:int = 0 #used for exeception raising on obsGroup order.
+    n_scan:int = 126 #used for exeception raising on obsGroup order. #was 126
     n_priv:int = 3 #used for exeception raising on obsGroup order.
 
     n_priv_latent_gains_stiffness = 29
@@ -702,7 +731,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
         # self.observations.critic.joint_vel_rel.history_length=self.history_len
 
         self.decimation = 4
-        self.episode_length_s = 7
+        self.episode_length_s = 12
         # viewer settings
         self.viewer.eye = (8.0, 0.0, 5.0)
         # simulation settings
@@ -732,11 +761,11 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
 class RobotPlayEnvCfg(RlMpcAugmentationEnvCfg):
     def __post_init__(self):
         super().__post_init__()
-        #self.scene.num_envs = 32
-        self.episode_length_s = 7
+        self.scene.num_envs = 100
+        self.episode_length_s = 12
 
-        self.use_hist_encoder = False
-        self.use_estimator = False
+        self.use_hist_encoder = True
+        self.use_estimator = True
 
 
         self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges

@@ -243,7 +243,7 @@ class ObservationManagerCustom(ObservationManager):
                         if term_name != "scan_dot":
                             raise TypeError(f"I have the wrong obs term in the 0th obs group slot. I have {term_name} where it should be 'scan_dot' ")
                         if self._env.cfg.n_scan != obs_dims[1]:
-                            raise ValueError("n_scan in the 0th obs group has changed to something not equal to env.cfg set val. Check obs group order")
+                            raise ValueError(f"n_scan in the 0th obs group has changed to something not equal to env.cfg set val. Its dim is {obs_dims[1]} when my cfg value is {self._env.cfg.n_scan} Check obs group order.")
                         self._env.cfg.n_scan = obs_dims[1]
                         print(f"n_scan {obs_dims[1]}")
                 elif obs_term_id == (1 - (not scan_dots)) and group_name == "policy":

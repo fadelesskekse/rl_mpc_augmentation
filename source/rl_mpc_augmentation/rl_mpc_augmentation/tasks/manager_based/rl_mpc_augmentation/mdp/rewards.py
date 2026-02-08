@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.sensors import ContactSensor
+from isaaclab.sensors import ContactSensor,RayCaster
 
 
 if TYPE_CHECKING:
@@ -227,3 +227,42 @@ def ang_vel_z_exp(
     return torch.exp(-ang_vel_error / std**2)
 
 
+def scan_dot_avg_reward(
+    env: ManagerBasedRLEnv, 
+    sensor_cfg: SceneEntityCfg,
+    target: float = 0.5,
+    std: float = 0.25,
+) -> torch.Tensor:
+    """Reward based on average normalized scan distance.
+    
+    Higher reward when obstacles are closer (scan_dot values closer to 1.0).
+    This encourages the robot to navigate toward/over terrain features.
+    """
+    sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
+    
+    ray_hit = sensor.data.ray_hits_w 
+    sensor_start = sensor.data.pos_w[:, None, :]
+    
+    # Check which rays missed (have inf values)
+    is_miss = torch.isinf(ray_hit).any(dim=-1)  # (num_envs, num_rays)
+    
+    # Replace inf with zeros temporarily for calculation
+    ray_hit = torch.where(torch.isinf(ray_hit), torch.zeros_like(ray_hit), ray_hit)
+    
+    delta = ray_hit - sensor_start
+    out = torch.norm(delta, dim=-1)  # (num_envs, num_rays)
+    
+    # For missed rays, set distance to max_distance
+    out = torch.where(is_miss, torch.full_like(out, sensor.cfg.max_distance), out)
+
+    # Normalize: 1.0 = close, 0.0 = far
+    out_normalized = 1.0 - (out / sensor.cfg.max_distance)
+    out_normalized = torch.clamp(out_normalized, 0.0, 1.0)
+
+    # Return average across all rays (shape: num_envs)
+    out_avg = out_normalized.mean(dim=-1)
+
+    error = torch.square(out_avg - target)
+    return torch.exp(-error / (std ** 2))
+    
+   # return out_avg

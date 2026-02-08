@@ -128,8 +128,25 @@
     - Get sim2sim setup
     - Get scan dots working
     
+47. Investigate why pos_w and quat_w are coming out NaN in the rayCaster file. 
 
+48. Investigate how this could be related to my program destabilizing. 
+    - Maybe when using raycaster with base it overrides the sim position with this Nan, but with other settings it doesn't
+    - What is the functionality supposed to be?
+    - Maybe Nans are coming out all the time but are being suppressed?
 
+49. Scan dots aren't looking close enough to our feet. Sometimes, specifically with going down stairs, even having a recurrent network wouldn't help because it doesn't ever look close enough.
+
+    - I need to get it to look more towards its feet. 
+    - So in general the depth camera will have its legs in the image, this could potentially be an issue. 
+        - I think I will need to look farther out with a recurrent such that I get a good view of the stairs before my legs block the view.
+        - Maybe try to encourage the robot to look slightly more down, but not a whole lot. 
+
+    -compare max velocity with and without scan dots. 
+    - try another one with the stepping stones
+    - try to increase domain randomization
+
+50. Move scan dots closer to feet, try to crank up max velocity and see what the maximum safe velocity it can traverse things is. 
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED
 

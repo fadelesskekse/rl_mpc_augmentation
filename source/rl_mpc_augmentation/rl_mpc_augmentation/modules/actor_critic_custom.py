@@ -114,7 +114,7 @@ class Actor(nn.Module):
             self.num_obs += priv_encoder_output_dim #dont add this twice in the historyencoder. 
 
         self.history_encoder = StateHistoryEncoder(activation, num_prop, num_hist, priv_encoder_output_dim)
-
+        
         if self.if_scan_encode:
             scan_encoder = []
             scan_encoder.append(nn.Linear(self.num_scan, scan_encoder_dims[0]))  #scan_encoder_dims = [128, 64, 32],
