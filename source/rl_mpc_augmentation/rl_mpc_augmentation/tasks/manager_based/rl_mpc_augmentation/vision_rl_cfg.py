@@ -36,7 +36,7 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
     border_height=0,
     num_rows=8,
     num_cols=4,
-    horizontal_scale=.1,
+    horizontal_scale=.05,
     vertical_scale=.05,#.005
     slope_threshold=0.75,
     difficulty_range=(0.0, 1.0),
@@ -72,8 +72,8 @@ PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
         "stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(proportion=.25,
                                                                   
                                                                   stone_height_max = .05,
-                                                                  stone_distance_range= (.1,.4),
-                                                                  stone_width_range= (.5,.7),
+                                                                  stone_distance_range= (.05,.2),
+                                                                  stone_width_range= (.8,1),
                                                                   platform_width=.75,
                                                                   border_width=1.0,
                                                                   holes_depth=-8),
@@ -141,7 +141,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
     scan_dot = RayCasterCfg(
     prim_path="{ENV_REGEX_NS}/Robot/torso_link",
     offset=RayCasterCfg.OffsetCfg(
-       pos=(.9, 0.01753, 0.42987),#0.0576235, 0.01753, 0.42987
+       pos=(.2, 0, 0.42987),#0.0576235, 0.01753, 0.42987
        #rot=(0.9238795, 0, 0.3826834, 0)
         rot=tuple(quat_from_euler_xyz(
             torch.tensor([0]), 
@@ -162,8 +162,8 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
     # height=240,),
 
     pattern_cfg=patterns.GridPatternCfg(
-        resolution=.196, #in meters, length then width #was .196
-        size=(1.625,2.6), #in meters,length then width
+        resolution=.05, #in meters, length then width #was .196
+        size=(.4,1.3), #in meters,length then width
     ),
 
     debug_vis=False,
@@ -716,7 +716,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     terminations: TerminationsCfg = TerminationsCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
 
-    n_scan:int = 126 #used for exeception raising on obsGroup order. #was 126
+    n_scan:int = 243 #used for exeception raising on obsGroup order. #was 126
     n_priv:int = 3 #used for exeception raising on obsGroup order.
 
     n_priv_latent_gains_stiffness = 29
@@ -751,7 +751,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
 
-        self.sim.physx.gpu_collision_stack_size = 155_000_000
+        self.sim.physx.gpu_collision_stack_size = 200_000_000
         self.sim.physics_material = self.scene.terrain.physics_material
         self.sim.physx.gpu_max_rigid_patch_count = 10 * 2**15
 
