@@ -147,6 +147,21 @@
     - try to increase domain randomization
 
 50. Move scan dots closer to feet, try to crank up max velocity and see what the maximum safe velocity it can traverse things is. 
+
+
+51. Make sure to properly setup mpc action cfg not just the action. I am combining a base and an inhertited action class and action cfg class into one. 
+
+52. _add_joint_offset in mpc action cfg needs to be changed.
+
+53. Need to change action range for mpc output on model residuals
+
+54. Remove gait cycle cmd from blind_mpc, need to set observaiotn/reward related stuff to the output of the mpc policy
+
+55. Is perserve order true required for mpc stuff? Look at mpc action init
+
+56. Nex tis look int getmpc state
+
+57. get reference velocity in process actions. How will the ramp effect
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED
 

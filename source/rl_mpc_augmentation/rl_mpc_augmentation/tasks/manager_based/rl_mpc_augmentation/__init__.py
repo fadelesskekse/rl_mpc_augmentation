@@ -11,7 +11,9 @@ TASK_IDS = [
 
     "blind_rl_v2",
     "blind_rl_v3",
+    "blind_mpc",
     "phase_1_scan_rl",
+
 ]
 
 ENTRY_POINTS = [
@@ -36,6 +38,12 @@ ENTRY_POINTS = [
     },
 
     {
+        "env_cfg_entry_point": f"{__name__}.blind_mpc_cfg:RlMpcAugmentationEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:PPORunnerCfgCustom",
+        "play_env_cfg_entry_point": f"{__name__}.blind_mpc_cfg:RobotPlayEnvCfg",
+    },
+
+    {
         "env_cfg_entry_point": f"{__name__}.vision_rl_cfg:RlMpcAugmentationEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:PPORunnerCfgCustom",
         "play_env_cfg_entry_point": f"{__name__}.vision_rl_cfg:RobotPlayEnvCfg",
@@ -45,6 +53,7 @@ ENTRY_POINTS = [
 ENV = [
     #"isaaclab.envs:ManagerBasedRLEnv",
     #"isaaclab.envs:ManagerBasedRLEnv"
+    f"{__name__}.envs.manager_based_rl_env_custom:ManagerBasedRLEnv",
     f"{__name__}.envs.manager_based_rl_env_custom:ManagerBasedRLEnv",
     f"{__name__}.envs.manager_based_rl_env_custom:ManagerBasedRLEnv",
     f"{__name__}.envs.manager_based_rl_env_custom:ManagerBasedRLEnv",
