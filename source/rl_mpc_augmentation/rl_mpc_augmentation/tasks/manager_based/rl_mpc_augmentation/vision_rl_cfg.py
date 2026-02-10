@@ -163,7 +163,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
 
     pattern_cfg=patterns.GridPatternCfg(
         resolution=.05, #in meters, length then width #was .196
-        size=(.4,1.3), #in meters,length then width
+        size=(.5,1.3), #in meters,length then width
     ),
 
     debug_vis=False,
@@ -538,7 +538,7 @@ class RewardsCfg:
     base_angular_velocity_xy = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     #base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
 
-    neg_z_vel = RewTerm(func=mdp.lin_vel_z_negative_l2, weight=-3.0)
+    neg_z_vel = RewTerm(func=mdp.lin_vel_z_negative_l2, weight=-4.5)
     #z_accel = RewTerm(func=mdp.body_lin_acc_l2_z,weight=-1)
     #lin_accel = RewTerm(func=mdp.body_lin_acc_l2,weight = -1/3000)
     #pos_z_vel = RewTerm(func=mdp.lin_vel_z_positive_l2, weight=-2.0)
@@ -598,7 +598,7 @@ class RewardsCfg:
 
     joint_deviation_ankle = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-.05,
+        weight=-.1,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_ankle_pitch_joint"])},
     )
 
@@ -716,7 +716,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     terminations: TerminationsCfg = TerminationsCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
 
-    n_scan:int = 243 #used for exeception raising on obsGroup order. #was 126
+    n_scan:int = 297 #used for exeception raising on obsGroup order. #was 126
     n_priv:int = 3 #used for exeception raising on obsGroup order.
 
     n_priv_latent_gains_stiffness = 29
