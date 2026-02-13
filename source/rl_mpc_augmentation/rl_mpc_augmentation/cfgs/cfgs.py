@@ -11,6 +11,8 @@ from isaaclab_rl.rsl_rl.rl_cfg import RslRlPpoAlgorithmCfg,RslRlPpoActorCriticCf
 class RslRlPpoActorCriticCfgCustom(RslRlPpoActorCriticCfg):
             
     scan_encoder_dims:list = MISSING
+    scan_cnn: bool = MISSING
+    scan_cnn_output_dim: int = MISSING
     priv_encoder_dims:list = MISSING
     # only for 'ActorCriticRecurrent':
     rnn_type: str = MISSING

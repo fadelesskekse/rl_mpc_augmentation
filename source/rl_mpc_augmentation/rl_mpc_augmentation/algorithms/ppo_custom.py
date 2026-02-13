@@ -384,6 +384,12 @@ class PPOCustom:
             # -- critic
             value_batch = self.policy.evaluate(obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1])
 
+           # print(f"value_batch shape: {value_batch.shape}")
+            #for terms in obs_batch[]
+            #print(f"obs_batch shape: {obs_batch}")
+           # print("update PPO for loop iteration")
+
+
            
             # -- entropy
             # we only keep the entropy of the first augmentation (the original one)
@@ -658,6 +664,12 @@ class PPOCustom:
         if mean_symmetry_loss is not None:
             mean_symmetry_loss /= num_updates
         # -- Clear the storage
+
+        
+        self.print_debug()
+        if mean_value_loss >= .5:
+            raise ValueError(f"Value Loss is above .5, something is happening. Value loss is: {mean_value_loss}")
+
         self.storage.clear()
 
 
@@ -707,7 +719,82 @@ class PPOCustom:
         loss_dict.update(grad_stats)
         self.update_counter()
 
+        #if self.counter == 7105:
+            #mean_value_loss =1
+            #print(f"value loss: {mean_value_loss}")
+       # print(f"counter: {self.counter}")
+      
         return loss_dict
+        
+    def print_debug(self):
+
+        observations = self.storage.observations.flatten(0, 1)
+        actions = self.storage.actions.flatten(0, 1)
+        values = self.storage.values.flatten(0, 1)
+        returns = self.storage.returns.flatten(0, 1)
+
+        actor_obs = observations["policy"]      # [39600, num_act_obs]
+        critic_obs = observations["critic"]     # [39600, num_crit_obs]
+
+        size = actor_obs.shape[0]
+
+        print(f"\nTotal transitions: {size}")
+        print(f"Actor obs dim: {actor_obs.shape[1]}")
+        print(f"Critic obs dim: {critic_obs.shape[1]}")
+
+        # --------------------------------------------------
+        # Define observation structure (name, dimension)
+        # --------------------------------------------------
+
+        obs_structure = [
+            ("scan_dot", 297),
+            ("base_lin_vel", 3),
+            ("priv_latent_gains_stiffness", 29),
+            ("priv_latent_gains_damping", 29),
+            ("priv_latent_mass", 1),
+            ("priv_latent_com", 3),
+            ("priv_latent_friction", 4),
+            ("joint_pos_rel", 290),
+            ("joint_vel_rel", 290),
+            ("base_ang_vel", 15),
+            ("projected_gravity", 15),
+            ("velocity_commands", 15),
+            ("last_action", 150),
+            ("gait_phase", 10),
+        ]
+
+        # --------------------------------------------------
+        # Helper function to parse and average
+        # --------------------------------------------------
+
+        def parse_and_average(obs_tensor, label):
+            print(f"\n--- {label} ---")
+
+            offset = 0
+            results = {}
+
+            for name, dim in obs_structure:
+                slice_ = obs_tensor[:, offset:offset + dim]  # [39600, dim]
+                mean_val = slice_.mean(dim=0)                # [dim]
+
+                results[name] = mean_val
+
+                print(f"{name:35s} | dim: {dim:4d} | mean(abs): {mean_val.abs().mean().item():.6f}")
+
+                offset += dim
+
+            return results
+
+        # --------------------------------------------------
+        # Run for actor and critic
+        # --------------------------------------------------
+
+        actor_means = parse_and_average(actor_obs, "ACTOR OBS")
+        critic_means = parse_and_average(critic_obs, "CRITIC OBS")
+        
+        
+
+    
 
 
     def update_dagger(self):

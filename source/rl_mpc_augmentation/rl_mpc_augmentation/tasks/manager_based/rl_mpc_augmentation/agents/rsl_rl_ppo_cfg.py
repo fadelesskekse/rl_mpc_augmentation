@@ -96,6 +96,9 @@ class PPORunnerCfgCustom(RslRlOnPolicyRunnerCfg):
         noise_std_type="log",
 
         scan_encoder_dims = [128, 64, 32],
+        scan_cnn = True,
+        scan_cnn_output_dim = 32,
+       
         #priv_encoder_dims = [64, 20],
         priv_encoder_dims = [128,64, 32],
         # only for 'ActorCriticRecurrent':
@@ -122,7 +125,7 @@ class PPORunnerCfgCustom(RslRlOnPolicyRunnerCfg):
         max_grad_norm=1.0,
         # dagger params
         dagger_update_freq = 20,
-        priv_reg_coef_schedual = [0, 0.1, 2000, 3000],#[0, 0.1, 2000, 3000],
+        priv_reg_coef_schedual = [0, 0.1, 0, 1],#[0, 0.1, 2000, 3000],
         priv_reg_coef_schedual_resume = [0, 0.1, 0, 1],
     )
 

@@ -603,6 +603,13 @@ class OnPolicyRunnerCustom:
         if resumed_training:
             self.current_learning_iteration = loaded_dict["iter"]
         return loaded_dict["infos"]
+    
+    def get_scan_dot_latent(self,device=None):
+        self.eval_mode()
+        if device is not None:
+            self.alg.policy.to(device)
+            
+        return self.alg.policy.actor.infer_scan_latent
 
     def get_inference_policy(self, device=None):
         self.eval_mode()  # switch to evaluation mode (dropout for example)
@@ -723,6 +730,8 @@ class OnPolicyRunnerCustom:
                                                               num_priv_latent = self.env.cfg.n_priv_latent, 
                                                               num_priv_explicit = self.env.cfg.n_priv, 
                                                               num_hist = self.env.cfg.history_len,
+                                                              row_scan = self.env.cfg.row_scan,
+                                                              col_scan = self.env.cfg.col_scan,
                                                               num_hist_for_actor_backbone_proprio = self.env.cfg.history_len_for_regular_proprio_actor,
                                                               **self.policy_cfg).to(self.device)
         else:

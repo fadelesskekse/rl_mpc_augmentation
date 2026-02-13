@@ -52,6 +52,9 @@ def gait_cycle_var(
     leg_phase = torch.cat(phases, dim=-1)
 
     #print(f"Glboal phase in observation: {global_phase}")
+    # avg_leg_phase = leg_phase.abs().mean()
+    # if avg_leg_phase > 5:
+    #     raise Exception(f"Average leg_phase value too high: {avg_leg_phase.item()}")
 
 
     return leg_phase
@@ -141,6 +144,8 @@ def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, asset_cfg: SceneE
     ray_hit = torch.where(torch.isinf(ray_hit), torch.zeros_like(ray_hit), ray_hit)
     
     delta = ray_hit - sensor_start
+
+   # print(f"ray_hit: {ray_hit}")
     out = torch.norm(delta, dim=-1)  # (num_envs, num_rays)
     
     # For missed rays, set distance to max_distance
@@ -158,12 +163,26 @@ def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, asset_cfg: SceneE
     out_normalized = 1.0 - (out / sensor.cfg.max_distance)
     out_normalized = torch.clamp(out_normalized, 0.0, 1.0)
 
+    # N = out_normalized.shape[1]
+    # batch_size = out_normalized.shape[0]
+    # group_size = 27
+
+    # pattern = torch.arange(N // group_size).repeat_interleave(group_size)
+    # if pattern.shape[0] < N:
+    #     pattern = torch.cat([pattern, torch.full((N - pattern.shape[0],), pattern[-1])])
+    # test_value = pattern.unsqueeze(0).repeat(batch_size, 1).to(out_normalized.device, dtype=out_normalized.dtype)
+    # return test_value
+    
     #out_avg = out_normalized.mean(dim=-1, keepdim=True)
 
    # print(f"out avg: {out_avg}")
 
 
     #return torch.zeros_like(out_normalized)
+    # avg_out_normalized = out_normalized.abs().mean()
+    # if avg_out_normalized > 5:
+    #     raise Exception(f"Average scan_dot normalized value too high: {avg_out_normalized.item()}")
+
     return out_normalized
    
 
@@ -246,7 +265,11 @@ def priv_latent_gains_stiffness(
    # print(f"stiffness_default: {stiffness_default}")
 
   # print(f"stiffness random: {stiffness}")
-
+   
+    # avg_stiffness_noirm = stiffness_norm.mean()
+    # if avg_stiffness_noirm > 5:
+    #     raise Exception(f"Average stiffness_norm too high: {avg_stiffness_noirm.item()}")
+    
     return stiffness_norm
     #return torch.ones_like(stiffness_norm)*0
 
@@ -269,6 +292,10 @@ def priv_latent_gains_damping(
 
     damping_norm = (damping - damping_default) / scale
     #print(f"damping_norm: {damping_norm}")
+    # avg_damping_norm = damping_norm.mean()
+    # if avg_damping_norm > 5:
+    #     raise Exception(f"Average damping_norm too high: {avg_damping_norm.item()}")
+    
 
     return damping_norm
     #return torch.ones_like(damping_norm)*0
@@ -305,6 +332,11 @@ def priv_latent_mass(
 
    # print(f"mass norm {mass_norm}")
 
+    # avg_mass_norm = mass_norm.mean()
+    # if avg_mass_norm > 5:
+    #     raise Exception(f"Average mass_norm too high: {avg_mass_norm.item()}")
+    
+
     return mass_norm
     #return torch.ones_like(mass_norm)*100
 
@@ -319,6 +351,10 @@ def priv_latent_com(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntit
     com = asset.root_physx_view.get_coms()[:,9,:3].to(device)
 
    # return torch.ones_like(com)
+    # avg_com = com.mean()
+    # if avg_com > 5:
+    #     raise Exception(f"Average com_norm too high: {avg_com.item()}")
+    
 
     return com
     #return torch.ones_like(com)*100
@@ -350,6 +386,12 @@ def priv_latent_friction(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = Scene
         [left_avg_fric,right_avg_fric],
         dim=-1
     )
+
+    # avg_fric = priv.mean()
+    # if avg_fric > 5:
+    #     raise Exception(f"Average friction_norm too high: {avg_fric.item()}")
+    
+
 
     #return torch.ones_like(priv)*0
 

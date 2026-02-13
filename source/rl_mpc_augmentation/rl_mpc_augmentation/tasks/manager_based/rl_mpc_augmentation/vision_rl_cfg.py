@@ -164,6 +164,8 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
     pattern_cfg=patterns.GridPatternCfg(
         resolution=.05, #in meters, length then width #was .196
         size=(.5,1.3), #in meters,length then width
+        ordering='yx'
+
     ),
 
     debug_vis=False,
@@ -208,7 +210,7 @@ class CommandsCfg:
 
     base_velocity = mdp.UniformLevelVelocityCommandCfgClip(
         asset_name="robot",
-        resampling_time_range=(2, 12),
+        resampling_time_range=(.25, 12),
         rel_standing_envs=0.05,
         rel_heading_envs=1.0,
         heading_command=False,
@@ -240,7 +242,7 @@ class ActionsCfg:
         joint_names=[".*"], 
         scale=.25, #0.25
         use_default_offset=True,
-        #clip={"a":(1,1)},
+        clip={"a":(1,1)},
         
     )
 
@@ -328,7 +330,7 @@ class ObservationsCfg:
 
         # # # # observation terms (order preserved)
         scan_dot = ObsTerm(func=mdp.scan_dot, 
-                scale = .1,
+                scale = 1,
                 params={
                     "sensor_cfg": SceneEntityCfg("scan_dot",),
                    # "asset_cfg": SceneEntityCfg("robot", body_names=".*torso_link.*"),
@@ -480,8 +482,8 @@ class EventCfg:
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity_delayed,
         mode="interval",
-        interval_range_s=(.25, 7),
-        params={"velocity_range": {"x": (-.5, .5), "y": (-.5, .5)},"curr_lim":.5} #was +-.5
+        interval_range_s=(.25, 12),
+        params={"velocity_range": {"x": (-.5, .5), "y": (-.5, .5)},"curr_lim":.1} #was +-.5
                
     )
 
@@ -730,6 +732,17 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     history_len:int = 10
     history_len_for_regular_proprio_actor:int = 5
 
+    scan_res = scene.scan_dot.pattern_cfg.resolution
+    scan_size: tuple = scene.scan_dot.pattern_cfg.size
+    length = scan_size[0]
+    width  = scan_size[1]
+
+
+    row_scan = int(torch.arange(-length/2, length/2 + 1e-9, scan_res).numel())
+
+    col_scan = int(torch.arange(-width /2, width  /2 + 1e-9, scan_res).numel())
+
+
     #critic observations take in raw priv info and raw n_scan
     num_critic_obs:int = n_scan + (history_len)*n_proprio + n_priv_latent + n_priv 
 
@@ -737,7 +750,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self) -> None:
         """Post initialization."""
         # general settings
-
+      
         # self.observations.policy.joint_pos_rel.history_length=self.history_len
         # self.observations.policy.joint_vel_rel.history_length=self.history_len
         # self.observations.critic.joint_pos_rel.history_length=self.history_len

@@ -162,6 +162,11 @@
 56. Nex tis look int getmpc state
 
 57. get reference velocity in process actions. How will the ramp effect
+
+58. terrain lvl
+ speed cmd change
+ disturbance
+ stand percetnag4e
 ####################################################
 19. Early termination if I exceed half of the course?: SOLVED
 

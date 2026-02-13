@@ -18,6 +18,7 @@ import cli_args  # isort: skip
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
+parser.add_argument("--pca_scan",action="store_true",default=False, help="Compare Stair vs. Stepping Stone PCA for Scandots")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument(
@@ -84,6 +85,10 @@ from vec_env_wrapper_custom import RslRlVecEnvWrapperCustom
 from unitree_rl_lab.utils.parser_cfg import parse_env_cfg
 
 from rl_mpc_augmentation.runners.on_policy_runner_custom import OnPolicyRunnerCustom
+
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -196,6 +201,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     #This returns the function inference() to be called
     estimator = runner.get_estimator_inference_policy(device=env.device)
 
+    scan_dot = runner.get_scan_dot_latent(device=env.unwrapped.device)
+
     # extract the neural network module
     # we do this in a try-except to maintain backwards compatibility.
     try:
@@ -247,6 +254,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     use_hist_encoder = env_cfg.use_hist_encoder
     use_estimator = env_cfg.use_estimator
 
+    latents = []
+    terrain_ids = []
+
+    row_scan = env_cfg.row_scan
+    col_scan = env_cfg.col_scan
+
     #print("made it before sim")
     while simulation_app.is_running():
         start_time = time.time()
@@ -257,6 +270,22 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             actions = policy(obs,hist_encoding=use_hist_encoder)
             # env stepping
             obs, _, _, extras = env.step(actions)
+
+            if args_cli.pca_scan:
+                #print("I am in here")
+                scan_obs = obs.get("policy")[:,:num_scan]
+
+                B = scan_obs.shape[0]
+                scan_obs = scan_obs.view(B, 1, row_scan, col_scan)
+                       # print(f"obs_scan: {obs_scan}")
+                        # print(f"obs shape for conv scan {obs_scan.shape}")
+                scan_latent =scan_dot(scan_obs)
+                
+                latents.append(scan_latent.cpu())
+                terrain_types = env.unwrapped.scene.terrain.terrain_types.clone().cpu()
+                terrain_ids.append(terrain_types)
+               # print(f"scan_latent: {scan_dot(scan_obs)}")
+                #print(f"terrain_types: {terrain_types}")
 
             if use_estimator:
 
@@ -325,6 +354,37 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             time.sleep(sleep_time)
 
     # close the simulator
+    #print("Hi")
+    if args_cli.pca_scan:
+        terrain_ids = torch.cat(terrain_ids).numpy()
+        latents = torch.cat(latents, dim=0).numpy()
+
+                # Normalize
+        latents = (latents - latents.mean(0)) / latents.std(0)
+
+        pca = PCA(n_components=2)
+        latent_2d = pca.fit_transform(latents)
+        print("Explained variance:", pca.explained_variance_ratio_)
+
+        plt.figure()
+
+        for terrain in np.unique(terrain_ids):
+            idx = terrain_ids == terrain
+            plt.scatter(
+                latent_2d[idx, 0],
+                latent_2d[idx, 1],
+                s=5,
+                label=f"Terrain {terrain}"
+            )
+
+        plt.legend()
+        plt.title("PCA of Scan Latent by Terrain Type")
+        plt.xlabel("PC1")
+        plt.ylabel("PC2")
+        plt.show()
+
+        
+
     env.close()
 
 
@@ -332,4 +392,5 @@ if __name__ == "__main__":
     # run the main function
     main()
     # close sim app
+    #print("I am about to close")
     simulation_app.close()

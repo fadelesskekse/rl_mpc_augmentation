@@ -78,8 +78,14 @@ class Actor(nn.Module):
                  num_priv_latent, 
                  num_priv_explicit, 
                  num_hist, activation, 
-                 tanh_encoder_output=False) -> None:
+                 scan_cnn,
+                 row_scan,
+                 col_scan,
+                 scan_cnn_output_dim,
+                 tanh_encoder_output=False,
+                 ) -> None:
         
+       
 
         super().__init__()
         # prop -> scan -> priv_explicit -> priv_latent -> hist
@@ -93,6 +99,17 @@ class Actor(nn.Module):
         self.num_priv_latent = num_priv_latent
         self.num_priv_explicit = num_priv_explicit
         self.if_scan_encode = scan_encoder_dims is not None and num_scan > 0
+        self.scan_encode_cnn = self.if_scan_encode and scan_cnn
+        self.row_scan = row_scan
+        self.col_scan = col_scan
+        self.scan_cnn_output_dim = scan_cnn_output_dim
+
+        assert self.row_scan * self.col_scan == self.num_scan, \
+            f"row_scan*col_scan={self.row_scan*self.col_scan} != num_scan={self.num_scan}"
+
+       # print(f"scan_encoder_dins: {scan_encoder_dims} and scan_cnn: {self.scan_encode_cnn}")
+
+       # print(f"scan cnn output dim: {self.scan_cnn_output_dim}")
 
         if len(priv_encoder_dims) > 0:
                     priv_encoder_layers = []
@@ -117,20 +134,129 @@ class Actor(nn.Module):
         
         if self.if_scan_encode:
             scan_encoder = []
-            scan_encoder.append(nn.Linear(self.num_scan, scan_encoder_dims[0]))  #scan_encoder_dims = [128, 64, 32],
-            scan_encoder.append(activation)
-            for l in range(len(scan_encoder_dims) - 1):
-                if l == len(scan_encoder_dims) - 2:
-                    scan_encoder.append(nn.Linear(scan_encoder_dims[l], scan_encoder_dims[l+1]))
-                    scan_encoder.append(nn.Tanh())
-                else:
-                    scan_encoder.append(nn.Linear(scan_encoder_dims[l], scan_encoder_dims[l + 1]))
-                    scan_encoder.append(activation)
-            self.scan_encoder = nn.Sequential(*scan_encoder)
-            self.scan_encoder_output_dim = scan_encoder_dims[-1]
 
-            self.num_obs += self.scan_encoder_output_dim
-            
+            if not self.scan_encode_cnn:
+
+                
+                scan_encoder.append(nn.Linear(self.num_scan, scan_encoder_dims[0]))  #scan_encoder_dims = [128, 64, 32],
+                scan_encoder.append(activation)
+                for l in range(len(scan_encoder_dims) - 1):
+                    if l == len(scan_encoder_dims) - 2:
+                        scan_encoder.append(nn.Linear(scan_encoder_dims[l], scan_encoder_dims[l+1]))
+                        scan_encoder.append(nn.Tanh())
+                    else:
+                        scan_encoder.append(nn.Linear(scan_encoder_dims[l], scan_encoder_dims[l + 1]))
+                        scan_encoder.append(activation)
+                self.scan_encoder = nn.Sequential(*scan_encoder)
+                self.scan_encoder_output_dim = scan_encoder_dims[-1]
+
+                self.num_obs += self.scan_encoder_output_dim
+
+            else:
+
+                # oc1 = 32
+                # k1 = 5
+                
+                # k2 = 2
+                # s2 = 2
+
+                # oc3 = 64
+                # k3 = 3
+
+                # H1 = (row_scan - k1)+1
+                # W1 = (col_scan - k1)+1
+
+                # H2 = (H1  - k2)//s2 + 1
+                # W2 = (W1  - k2)//s2 + 1
+
+                # H3 = (H2 - k3) + 1
+                # W3 = (W2 - k3) + 1
+
+                # flatten_dim = oc3 * H3 * W3
+
+                # #[1,row_scan,col_scan]
+                # self.scan_encoder = nn.Sequential(
+                #     # [1, 58, 87]
+                #     #[1, row_scan,col_scan]
+                #     nn.Conv2d(in_channels=1, out_channels=oc1, kernel_size=k1),
+                #     # [32, 54, 83]
+                #     #[32,prev_row = (row_scan - k1)+1, prev_col = (col_scan - k1)+1]
+                #     nn.MaxPool2d(kernel_size=k2, stride=s2),
+                #    # [32, 27, 41]
+                #    # [32, prev_row = (prev_row  - k2)/s2 + 1, prev_col = (prev_col  - k2)/s2 + 1 ]
+                #     activation,
+                #     nn.Conv2d(in_channels=oc1, out_channels=oc3, kernel_size=k3),
+                #     activation,
+                #     nn.Flatten(),
+                #     # [64, 25, 39]
+                #     #[64,prev_row = (prev_row - k3) + 1, prev_col = (prev_col - k3) + 1]
+                #     nn.Linear(flatten_dim, 128),
+                #     activation,
+                #     nn.Linear(128, self.scan_cnn_output_dim )
+                # )
+
+                oc1 = 16
+                k1 = 3
+                p1 = 1
+                
+                oc2 = 16
+                k2 = 3
+                p2 = 1
+
+                k3_h = 1
+                k3_w = 2
+                
+                oc4 = 32
+                k4 = 3
+                p4 = 1
+
+                H0 = row_scan
+                W0 = col_scan
+
+                H1 = (H0 +2*p1- k1)+1
+                W1 = (W0 +2*p1- k1)+1
+
+                H2 = (H1 +2*p2- k2) + 1
+                W2 = (W1 +2*p2- k2) + 1
+
+                H3 = (H2 - k3_h)//k3_h + 1
+                W3 = (W2 - k3_w)//k3_w + 1
+
+                H4 = (H3 +2*p4 - k4) + 1
+                W4 = (W3 +2*p4 - k4) + 1
+
+
+                flatten_dim = oc4 * H4 * W4
+
+                #[1,row_scan,col_scan]
+                self.scan_encoder = nn.Sequential(
+                    # [1, 58, 87]
+                    #[1, row_scan,col_scan]
+                    nn.Conv2d(in_channels=1, out_channels=oc1, kernel_size=k1,padding=p1),
+                    # [32, 54, 83]
+                    activation,
+                    nn.Conv2d(in_channels=oc1, out_channels=oc2, kernel_size=k2,padding=p2),
+                    activation,
+                    #[32,prev_row = (row_scan - k1)+1, prev_col = (col_scan - k1)+1]
+                    nn.MaxPool2d(kernel_size=(k3_h,k3_w)),
+                   # [32, 27, 41]
+                   # [32, prev_row = (prev_row  - k2)/s2 + 1, prev_col = (prev_col  - k2)/s2 + 1 ]
+                    #activation,
+                    nn.Conv2d(in_channels=oc2, out_channels=oc4, kernel_size=k4,padding=p4),
+                    activation,
+                    nn.Flatten(),
+                    # [64, 25, 39]
+                    #[64,prev_row = (prev_row - k3) + 1, prev_col = (prev_col - k3) + 1]
+                    nn.Linear(flatten_dim, 128),
+                    activation,
+                    nn.Linear(128, self.scan_cnn_output_dim )
+                )
+
+                self.scan_encoder_output_dim = self.scan_cnn_output_dim 
+                self.num_obs += self.scan_cnn_output_dim 
+                
+
+
         else:
             self.scan_encoder = nn.Identity()
             self.scan_encoder_output_dim = self.num_scan
@@ -180,8 +306,18 @@ class Actor(nn.Module):
                 if obs_scan.shape[1] != self.num_scan:
                     raise ValueError(f"obs_scan should be the same size as num_scan, it is size {obs_scan.shape[1]}")
                 
+
                 if scandots_latent is None: #If we dont pass a scandot_latent in the Actors forward pass, we generate a new latent. 
-                    scan_latent = self.scan_encoder(obs_scan)   
+
+                    if not self.scan_encode_cnn:
+                        scan_latent = self.scan_encoder(obs_scan) 
+                    else:
+                        B = obs_scan.shape[0]
+                        obs_scan = obs_scan.view(B, 1, self.row_scan, self.col_scan)
+                       # print(f"obs_scan: {obs_scan}")
+                        # print(f"obs shape for conv scan {obs_scan.shape}")
+                        scan_latent = self.scan_encoder(obs_scan)
+
                 else:
                     scan_latent = scandots_latent
                # obs_prop_scan = torch.cat([obs[:, :self.num_prop], scan_latent], dim=1) #combines the scan latent and propropception observations into
@@ -215,6 +351,8 @@ class Actor(nn.Module):
                 raise ValueError(f"obs_priv_explicit should be of size {self.num_priv_explicit}, but it of size {obs_priv_explicit.shape[1]}")
             
            # print(f"hist_encoding: {hist_encoding}")
+           # hist = obs[:,self.num_scan + self.num_priv_explicit + self.num_priv_latent: self.num_scan + self.num_priv_explicit + self.num_priv_latent + self.num_hist*self.num_prop//2]
+            #print(f"history proprio: {hist}")
             if hist_encoding:
                 latent = self.infer_hist_latent(obs)
                # print("I am using hist encoder")
@@ -323,6 +461,8 @@ class Actor(nn.Module):
                 raise ValueError(f"obs_priv_explicit should be of size {self.num_priv_explicit}, but it of size {obs_priv_explicit.shape[1]}")
             
            # print(f"hist_encoding: {hist_encoding}")
+            #hist = obs[:,self.num_scan + self.num_priv_explicit + self.num_priv_latent: self.num_scan + self.num_priv_explicit + self.num_priv_latent + self.num_hist*self.num_prop]
+            #print(f"history proprio: {hist}")
             if hist_encoding:
                 latent = self.infer_hist_latent(obs)
             else:
@@ -392,6 +532,9 @@ class Actor(nn.Module):
         #     backbone_output = self.actor_backbone(backbone_input)
 
         #     return backbone_output
+
+    def infer_scan_latent(self,obs):
+        return self.scan_encoder(obs)
     
     def infer_priv_latent(self, obs):
 
@@ -411,7 +554,7 @@ class Actor(nn.Module):
         hist = obs[:,self.num_scan + self.num_priv_explicit + self.num_priv_latent: self.num_scan + self.num_priv_explicit + self.num_priv_latent + self.num_hist*self.num_prop]
         
         #print(f"hist: {hist}")
-       # print(f"proprio hist: {hist}")
+        #print(f"proprio hist: {hist}")
 
         num_envs = hist.shape[0]
         H = self.num_hist           # e.g. 10
@@ -486,6 +629,10 @@ class ActorCriticRMA(nn.Module):
 
         ########## custom ############
         scan_encoder_dims=[256, 256, 256],
+        scan_cnn = False,
+        row_scan = 10,
+        col_scan = 26,
+        scan_cnn_output_dim = 31,
         ########## custom end ############
 
 
@@ -497,6 +644,8 @@ class ActorCriticRMA(nn.Module):
                 + str([key for key in kwargs.keys()])
             )
         super().__init__()
+
+  
 
         #######c##########
         self.kwargs = kwargs
@@ -546,8 +695,13 @@ class ActorCriticRMA(nn.Module):
                            num_priv_latent, 
                            num_priv_explicit, 
                            num_hist, 
-                           get_activation(activation), 
-                           tanh_encoder_output=kwargs['tanh_encoder_output'])
+                           get_activation(activation),
+                           scan_cnn,
+                           row_scan,
+                           col_scan,
+                           scan_cnn_output_dim,
+                           tanh_encoder_output=kwargs['tanh_encoder_output'],
+                           )
         ####################cn#######################
 
         # actor observation normalization
