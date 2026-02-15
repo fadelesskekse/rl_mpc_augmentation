@@ -9,10 +9,11 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, R
 
 from rl_mpc_augmentation.cfgs.cfgs import RslRlPpoAlgorithmCfgCustom,RslRlPpoActorCriticCfgCustom, EstimatorCfg
 
-#from rl_mpc_augmentation.tasks.manager_based.rl_mpc_augmentation.blind_rl_cfg import RlMpcAugmentationEnvCfg
+from rl_mpc_augmentation.tasks.manager_based.rl_mpc_augmentation.blind_rl_cfg import RlMpcAugmentationEnvCfg
 
 from rl_mpc_augmentation.algorithms.ppo_custom import PPOCustom
 
+# Standard privileged PPO config
 @configclass
 class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
@@ -22,7 +23,8 @@ class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
     experiment_name = "rl_mpc_augmentation"  # same as task name
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
-        init_noise_std=1,
+        # init_noise_std=1,
+        init_noise_std=0.1,
         actor_hidden_dims=[512, 256, 128],
         critic_hidden_dims=[512, 256, 128],
         activation="elu",
@@ -89,15 +91,15 @@ class PPORunnerCfgCustom(RslRlOnPolicyRunnerCfg):
 
     policy = RslRlPpoActorCriticCfgCustom(
         class_name="ActorCriticRMA",
-        init_noise_std=1,
+        init_noise_std=1,# noise/standard deviation in actions
         actor_hidden_dims=[512, 256, 128],
         critic_hidden_dims=[512, 256, 128],
         activation="elu",
         noise_std_type="log",
 
+
         scan_encoder_dims = [128, 64, 32],
-        #priv_encoder_dims = [64, 20],
-        priv_encoder_dims = [128,64, 32],
+        priv_encoder_dims = [64, 20],
         # only for 'ActorCriticRecurrent':
         rnn_type = 'lstm',
         rnn_hidden_size = 512,
@@ -107,14 +109,15 @@ class PPORunnerCfgCustom(RslRlOnPolicyRunnerCfg):
     )
     
     algorithm = RslRlPpoAlgorithmCfgCustom(
+        # 
         class_name= "PPOCustom",
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
         clip_param=0.2,
-        entropy_coef=0.01,#.01
+        entropy_coef=0.01,
         num_learning_epochs=5,
         num_mini_batches=4,
-        learning_rate=1.0e-3,#1e-4
+        learning_rate=1.0e-4,
         schedule="adaptive",
         gamma=0.99,
         lam=0.95,
@@ -122,14 +125,14 @@ class PPORunnerCfgCustom(RslRlOnPolicyRunnerCfg):
         max_grad_norm=1.0,
         # dagger params
         dagger_update_freq = 20,
-        priv_reg_coef_schedual = [0, 0.1, 2000, 3000],#[0, 0.1, 2000, 3000],
+        priv_reg_coef_schedual = [0, 0.1, 2000, 3000],
         priv_reg_coef_schedual_resume = [0, 0.1, 0, 1],
     )
 
 
     estimator = EstimatorCfg(
         train_with_estimated_states = True,
-        learning_rate = 1.e-3,
+        learning_rate = 1.e-4,
         hidden_dims = [128, 64],
     )
 

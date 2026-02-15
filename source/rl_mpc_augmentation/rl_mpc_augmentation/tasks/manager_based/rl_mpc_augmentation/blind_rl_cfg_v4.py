@@ -19,10 +19,12 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
-from isaaclab.sensors import ContactSensorCfg #CameraCfg, TiledCameraCfg
+from isaaclab.sensors import ContactSensorCfg, CameraCfg #TiledCameraCfg
 from isaaclab.sensors.ray_caster import RayCasterCfg, patterns
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.utils import configclass
+
+from rl_mpc_augmentation.rl_mpc_augmentation.tasks.manager_based.rl_mpc_augmentation.mdp.observations.observation_manager_distillation import ObservationManagerDistillation
 
 from . import mdp
 
@@ -105,6 +107,23 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
             intensity=750.0,
             texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
         ),
+    )
+
+    # camera sensor
+    front_camera = CameraCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/torso_link/d435_link/camera_sensor",        
+        update_period=0, # Updates every sim step
+        data_types=["distance_to_image_plane"], # Matches your ObsTerm
+        spawn=sim_utils.PinholeCameraCfg(
+            focal_length=24.0,
+            focus_distance=400.0,
+            horizontal_aperture=20.955,
+            clipping_range=(0.1, 10.0),
+        ),
+        width=84, # Low res for RL distillation
+        height=58,
+        # Offset if the USD prim isn't perfectly aligned
+        offset=CameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="ros"),
     )
 
     # tiled_camera: TiledCameraCfg = TiledCameraCfg(
@@ -255,6 +274,11 @@ class ObservationsCfg:
     
         # to satisfy test script
 
+        depth_image = ObsTerm(
+            func = mdp.image, # standard isaaclab image fetcher
+            params={"sensor_cfg": SceneEntityCfg("front_camera"), "data_type": "distance_to_image_plane"},
+        )
+
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
         
         priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1,params={"scale_val": .2})
@@ -288,7 +312,8 @@ class ObservationsCfg:
         def __post_init__(self):
             #self.history_length = 5
             self.enable_corruption = True
-            self.concatenate_terms = True
+            self.concatenate_terms = False
+
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
@@ -709,6 +734,7 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
         # self.observations.policy.joint_vel_rel.history_length=self.history_len
         # self.observations.critic.joint_pos_rel.history_length=self.history_len
         # self.observations.critic.joint_vel_rel.history_length=self.history_len
+        self.class_type = ObservationManagerDistillation
 
         self.decimation = 4
         self.episode_length_s = 7
