@@ -127,12 +127,42 @@ def gait_cycle(
     
 #     return out
 
-def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+# def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+
+#     sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
+    
+#     ray_hit = sensor.data.ray_hits_w 
+#     sensor_start = sensor.data.pos_w[:, None, :]
+    
+#     # Check which rays missed (have inf values)
+#     is_miss = torch.isinf(ray_hit).any(dim=-1)  # (num_envs, num_rays)
+    
+#     # Replace inf with zeros temporarily for calculation
+#     ray_hit = torch.where(torch.isinf(ray_hit), torch.zeros_like(ray_hit), ray_hit)
+    
+#     delta = ray_hit - sensor_start
+#     out = torch.norm(delta, dim=-1)  # (num_envs, num_rays)
+    
+#     # For missed rays, set distance to max_distance
+#     out = torch.where(is_miss, torch.full_like(out, sensor.cfg.max_distance), out)
+
+
+#     out_normalized = 1.0 - (out / sensor.cfg.max_distance)
+#     out_normalized = torch.clamp(out_normalized, 0.0, 1.0)
+
+#     return out_normalized
+
+
+
+def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, 
+             asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+             max_distance: float = 7.0) -> torch.Tensor:
 
     sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
     
     ray_hit = sensor.data.ray_hits_w 
     sensor_start = sensor.data.pos_w[:, None, :]
+
     
     # Check which rays missed (have inf values)
     is_miss = torch.isinf(ray_hit).any(dim=-1)  # (num_envs, num_rays)
@@ -141,29 +171,19 @@ def scan_dot(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, asset_cfg: SceneE
     ray_hit = torch.where(torch.isinf(ray_hit), torch.zeros_like(ray_hit), ray_hit)
     
     delta = ray_hit - sensor_start
+
+   # print(f"ray_hit: {ray_hit}")
     out = torch.norm(delta, dim=-1)  # (num_envs, num_rays)
     
     # For missed rays, set distance to max_distance
-    out = torch.where(is_miss, torch.full_like(out, sensor.cfg.max_distance), out)
+    out = torch.where(is_miss, torch.full_like(out, max_distance), out)
+    out = torch.clamp(out, max=max_distance)
 
-    
-  #  out_avg = out.mean(dim=-1, keepdim=True)
-
-   # print(f"start: {sensor_start}")
-   # print(f"ray_hit: {ray_hit}")
-   # print(f"delta: {delta}")
-   # print(f"out: {out}")
-   # print(f"average out: {out_avg}")
-
-    out_normalized = 1.0 - (out / sensor.cfg.max_distance)
+    out_normalized = 1.0 - (out / max_distance)
     out_normalized = torch.clamp(out_normalized, 0.0, 1.0)
 
-    #out_avg = out_normalized.mean(dim=-1, keepdim=True)
-
-   # print(f"out avg: {out_avg}")
 
 
-    #return torch.zeros_like(out_normalized)
     return out_normalized
    
 
