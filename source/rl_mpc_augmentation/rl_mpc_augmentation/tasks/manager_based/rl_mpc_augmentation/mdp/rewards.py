@@ -266,3 +266,88 @@ def scan_dot_avg_reward(
     return torch.exp(-error / (std ** 2))
     
    # return out_avg
+
+def scan_foot_placement_rew(
+    env: ManagerBasedRLEnv, 
+    sensor_cfg: SceneEntityCfg,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    obs_term: str = "scan_dot",
+    threshold: float = .1,
+) -> torch.Tensor:
+
+    scan_obs = None
+
+    sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    if env.observation_manager._obs_buffer is None:
+        env.observation_manager.compute()
+    critic_obs = env.observation_manager._obs_buffer["critic"]   
+
+    names = env.observation_manager._group_obs_term_names["critic"]
+    dims  = env.observation_manager._group_obs_term_dim["critic"] 
+
+    offset = 0
+    for name, shape in zip(names, dims):
+        width = int(np.prod(shape))
+
+        if name == obs_term:
+            # <-- THIS is the important line
+            scan_obs =  critic_obs[:, offset:offset+width]
+            break
+
+        offset += width
+
+    if scan_obs is None:
+        raise ValueError(f"obs_term '{obs_term}' not found in critic group")
+
+    #At this point we have the scan_dot critic obs to use in our reward
+
+
+   # print([asset.body_names[i] for i in asset_cfg.body_ids])
+    #print(f"sensor ray hits: {sensor.data.ray_hits_w }")
+    danger_mask = scan_obs < threshold 
+    ray_hits = sensor.data.ray_hits_w 
+    valid_hits = ~torch.isinf(ray_hits).any(dim=-1)
+    candidate_mask = danger_mask & valid_hits
+
+    hit_xy = ray_hits[..., :2].clone()
+    mask3 = candidate_mask.unsqueeze(-1)
+
+    hit_xy[~mask3.expand_as(hit_xy)] = float('nan')
+
+    feet_pos = asset.data.body_pos_w[:, asset_cfg.body_ids, :2]  
+
+    feet_xy_exp = feet_pos.unsqueeze(2)   # [E, F, 1, 2]
+    hit_xy_exp  = hit_xy.unsqueeze(1)    # [E, 1, R, 2]
+
+    dist = torch.norm(feet_xy_exp - hit_xy_exp, dim=-1) 
+
+        # mask of valid distances
+    valid_dist_mask = ~torch.isnan(dist)
+
+    # replace NaNs with 0 for summation
+    dist_no_nan = torch.nan_to_num(dist, nan=0.0)
+
+    # count valid rays per foot
+    valid_counts = valid_dist_mask.sum(dim=(1,2)) 
+
+    total_dist = dist_no_nan.sum(dim=(1,2))  
+
+    no_candidates = valid_counts == 0
+
+    avg_dist = torch.zeros_like(total_dist)
+
+    avg_dist[~no_candidates] = (
+    total_dist[~no_candidates] /
+    valid_counts[~no_candidates]
+    )
+
+    reward = torch.zeros_like(avg_dist)
+
+    reward[~no_candidates] = torch.exp(-avg_dist[~no_candidates])
+
+    #print(f"reward: {reward}")
+
+    # environments with no candidate rays automatically get 0
+    return reward

@@ -89,8 +89,8 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         prim_path="/World/ground",
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
-        max_init_terrain_level=PLAYGROUND.num_rows - 1,
-        #max_init_terrain_level=0,
+        #max_init_terrain_level=PLAYGROUND.num_rows - 1,
+        max_init_terrain_level=0,
         
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -328,7 +328,7 @@ class ObservationsCfg:
 
         # # # # observation terms (order preserved)
         scan_dot = ObsTerm(func=mdp.scan_dot, 
-                scale = .1,
+                scale = 1,
                 params={
                     "sensor_cfg": SceneEntityCfg("scan_dot",),
                    # "asset_cfg": SceneEntityCfg("robot", body_names=".*torso_link.*"),
