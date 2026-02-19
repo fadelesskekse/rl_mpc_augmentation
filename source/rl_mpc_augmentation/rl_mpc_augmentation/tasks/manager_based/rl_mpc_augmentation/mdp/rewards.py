@@ -12,7 +12,6 @@ from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensor,RayCaster
 
-
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 

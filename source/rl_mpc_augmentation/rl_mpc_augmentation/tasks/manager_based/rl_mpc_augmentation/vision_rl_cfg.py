@@ -492,6 +492,14 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
+    foot_placement = RewTerm(func=mdp.scan_foot_placement_rew,
+                             weight=-.25,
+                             params={
+                                "sensor_cfg": SceneEntityCfg("scan_dot",),
+                                "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+                                "obs_term": "scan_dot",}
+                            )
+
     # (1) Constant running reward
     alive = RewTerm(func=mdp.is_alive, weight=.15)
 
