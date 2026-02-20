@@ -90,7 +90,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
         #max_init_terrain_level=PLAYGROUND.num_rows - 1,
-        max_init_terrain_level=0,
+        max_init_terrain_level=5,
         
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -209,7 +209,7 @@ class CommandsCfg:
     base_velocity = mdp.UniformLevelVelocityCommandCfgClip(
         asset_name="robot",
         resampling_time_range=(2, 12),
-        rel_standing_envs=0.05,
+        rel_standing_envs=.05,
         rel_heading_envs=1.0,
         heading_command=False,
         debug_vis=False,
@@ -492,16 +492,22 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    foot_placement = RewTerm(func=mdp.scan_foot_placement_rew,
-                             weight=-.25,
-                             params={
-                                "sensor_cfg": SceneEntityCfg("scan_dot",),
-                                "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
-                                "obs_term": "scan_dot",}
-                            )
+    # foot_placement = RewTerm(func=mdp.scan_foot_placement_rew,
+    #                          weight=-2,
+    #                          params={
+    #                             "sensor_cfg": SceneEntityCfg("scan_dot",),
+    #                             "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+    #                             "obs_term": "scan_dot",}
+    #                         )
 
     # (1) Constant running reward
     alive = RewTerm(func=mdp.is_alive, weight=.15)
+
+    term_time = RewTerm(func=mdp.is_terminated_term_time_out_included, weight=-1,params={"term_keys": "time_out"})
+    term_bad_ori = RewTerm(func=mdp.is_terminated_term_time_out_included, weight=-3.5,params={"term_keys": "bad_orientation"})
+    term_height = RewTerm(func=mdp.is_terminated_term_time_out_included, weight=-2,params={"term_keys": "base_height"})
+   # term_comp = RewTerm(func=mdp.is_terminated_term_time_out_included, weight=100,params={"term_keys": "course_complete"})
+                      
 
     # scan_target = RewTerm(
     #     func=mdp.scan_dot_avg_reward,

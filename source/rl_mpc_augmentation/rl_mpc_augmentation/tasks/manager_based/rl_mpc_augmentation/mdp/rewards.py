@@ -9,8 +9,10 @@ import torch
 from typing import TYPE_CHECKING
 
 from isaaclab.assets import Articulation, RigidObject
-from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import SceneEntityCfg, ManagerTermBase
 from isaaclab.sensors import ContactSensor,RayCaster
+
+import numpy as np
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -350,3 +352,51 @@ def scan_foot_placement_rew(
 
     # environments with no candidate rays automatically get 0
     return reward
+
+class is_terminated_term_time_out_included(ManagerTermBase):
+    """Penalize termination for specific terms that don't correspond to episodic timeouts.
+
+    The parameters are as follows:
+
+    * attr:`term_keys`: The termination terms to penalize. This can be a string, a list of strings
+      or regular expressions. Default is ".*" which penalizes all terminations.
+
+    The reward is computed as the sum of the termination terms that are not episodic timeouts.
+    This means that the reward is 0 if the episode is terminated due to an episodic timeout. Otherwise,
+    if two termination terms are active, the reward is 2.
+    """
+
+    def __init__(self, cfg: RewardTermCfg, env: ManagerBasedRLEnv):
+        # initialize the base class
+        super().__init__(cfg, env)
+        # find and store the termination terms
+        term_keys = cfg.params.get("term_keys", ".*")
+        self._term_names = env.termination_manager.find_terms(term_keys)
+
+        self.target_name = "base_velocity"   # or whatever you want
+
+
+    def __call__(self, env: ManagerBasedRLEnv, term_keys: str | list[str] = ".*") -> torch.Tensor:
+        # Return the unweighted reward for the termination terms
+        reset_buf = torch.zeros(env.num_envs, device=env.device)
+        
+        for term in self._term_names:
+            # Sums over terminations term values to account for multiple terminations in the same step
+
+            if term == "time_out":
+                vel_cmd_term = env.command_manager.get_term(self.target_name)
+
+                term_val = env.termination_manager.get_term(term)
+                standing_cmd = vel_cmd_term.is_standing_env
+                moving_envs = ~standing_cmd
+
+                term_val *= moving_envs #Don't penalize timing out for environments that are commanded to stand still
+
+                reset_buf += term_val
+            
+            else:
+                reset_buf += env.termination_manager.get_term(term)
+
+        
+        return reset_buf.float()
+    
