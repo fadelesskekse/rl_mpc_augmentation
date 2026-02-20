@@ -9,6 +9,7 @@
 
 import argparse
 import sys
+import copy
 
 from isaaclab.app import AppLauncher
 from torch.utils.tensorboard import SummaryWriter
@@ -178,6 +179,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     #env.global_iteration = 10000
     
     env = RslRlVecEnvWrapperCustom(env, clip_actions=agent_cfg.clip_actions)
+    
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
@@ -197,12 +199,18 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     #This returns the function inference() to be called
     estimator = runner.get_estimator_inference_policy(device=env.device)
+    estimator_nn = None
 
     # extract the neural network module
     # we do this in a try-except to maintain backwards compatibility.
     try:
         # version 2.3 onwards
         policy_nn = runner.alg.policy
+
+        if hasattr(runner.alg, "estimator"):
+           # print(f"I have an estimator")
+            estimator_nn = runner.alg.estimator
+
         #print(f"AmI here?")
     except AttributeError:
         # version 2.2 and below
@@ -228,7 +236,15 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     #export_policy_as_jit(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.pt") #failing here
     
     #export_policy_as_onnx(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
-    export_policy_as_onnx_custom(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
+    num_scan = env_cfg.n_scan
+    priv_states_dim = env_cfg.n_priv
+    num_priv_latent = env_cfg.n_priv_latent
+    num_prop = env_cfg.n_proprio
+    history_len = env_cfg.history_len
+
+    export_policy_as_onnx_custom(policy_nn, estimator_nn, num_scan, priv_states_dim, num_priv_latent, num_prop, history_len, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
+
+ 
 
     dt = env.unwrapped.step_dt
 

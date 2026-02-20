@@ -6,7 +6,7 @@ import copy
 from isaaclab_rl.rsl_rl.exporter import _OnnxPolicyExporter
 
 def export_policy_as_onnx_custom(
-    policy: object, path: str, normalizer: object | None = None, filename="policy.onnx", verbose=False
+    policy: object,  estimator_nn: object, num_scan, priv_states_dim, num_priv_latent, num_prop, history_len, path: str, normalizer: object | None = None, filename="policy.onnx", verbose=False
 ):
     """Export policy into a Torch ONNX file.
 
@@ -19,14 +19,64 @@ def export_policy_as_onnx_custom(
     """
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
-    policy_exporter = _OnnxPolicyExporterCustom(policy, normalizer, verbose)
+    policy_exporter = _OnnxPolicyExporterCustom(policy, estimator_nn, num_scan, priv_states_dim, num_priv_latent, num_prop, history_len, normalizer, verbose)
     policy_exporter.export(path, filename)
+
+
 
 class _OnnxPolicyExporterCustom(_OnnxPolicyExporter):
 
+    def __init__(self, policy, estimator, num_scan, priv_states_dim, num_priv_latent, num_prop, history_len, normalizer=None, verbose=False):
+        # call parent constructor (this builds self.actor, self.normalizer, etc.)
+        super().__init__(policy, normalizer=normalizer, verbose=verbose)
+        self.estimator = copy.deepcopy(estimator)
+        self.num_scan = num_scan
+        self.priv_states_dim = priv_states_dim
+        self.num_priv_latent = num_priv_latent
+        self.num_prop = num_prop
+        self.history_len = history_len
+
+
     def forward(self, x):
       #  print("Hi i am running once")
-        return self.actor(self.normalizer(x),True)
+
+        
+        obs_raw = x.clone()
+
+        base = self.num_scan + self.priv_states_dim + self.num_priv_latent
+        half_prop = self.num_prop // 2
+
+        hist_offset = (self.history_len - 1) * half_prop
+
+        # print(f"actor_obs size: {actor_obs.shape}")
+        # print(f"actor_obs: {actor_obs}")
+
+        part1 = obs_raw[:, base + hist_offset: base + hist_offset+ half_prop]
+
+        # print(f"size of part1:{part1.shape}")
+        # print(f"part1: {part1}")
+
+        part2 = obs_raw[:, base + self.history_len*half_prop + hist_offset : base + self.history_len*half_prop + hist_offset + half_prop]
+
+        #print(f"size of part2:{part2.shape}")
+        #print(f"part2: {part2}")
+
+
+        estimator_input = torch.cat([part1, part2], dim=1)
+        #print(f"forward passing estimator obs: {estimator_input}")
+        priv_states_estimated = self.estimator(estimator_input)
+
+        left = obs_raw[:, :self.num_scan]
+        right = obs_raw[:, self.num_scan + self.priv_states_dim:]
+
+        obs_raw = torch.cat([left, priv_states_estimated, right], dim=1)
+
+        #obs_raw[:, self.num_scan: self.num_scan + self.priv_states_dim] = priv_states_estimated
+
+        #print(f"shape of obs in export: {x.shape}")
+
+
+        return self.actor(self.normalizer(obs_raw),True)
     
     def export(self, path, filename):
         self.to("cpu")

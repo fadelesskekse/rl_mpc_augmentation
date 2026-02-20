@@ -62,7 +62,7 @@ class StateHistoryEncoder(nn.Module):
         output = self.conv_layers(projection.reshape([nd, T, -1]).permute((0, 2, 1)))
         output = self.linear_output(output)
 
-       # print(f"hist encoder output shape: {output.shape}")
+        #print("I am enteringi the history forward encoder.")
         return output
     
 class Actor(nn.Module):
@@ -172,6 +172,7 @@ class Actor(nn.Module):
         if not eval:
            # print(f"obs shape passed to actor forward: {obs.shape}")
             if self.if_scan_encode: #Do we want to encode the scan dots? 
+                
                 #print(f"obs in forward actor pass: {obs}")
                 #obs_scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
                 obs_scan = obs[:,:self.num_scan]
@@ -222,14 +223,14 @@ class Actor(nn.Module):
            # print(f"hist_encoding: {hist_encoding}")
             if hist_encoding:
                 latent = self.infer_hist_latent(obs)
-                print("I am using hist encoder")
+               # print("I am using hist encoder")
 
                 
 
             else:
 
                 latent = self.infer_priv_latent(obs)
-                print("I am using priv encoder")
+              #  print("I am using priv encoder")
                  # Adaptation module update
                # with torch.inference_mode():
                    # print(f"priv latenet: {self.infer_priv_latent(obs)}")
