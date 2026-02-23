@@ -79,7 +79,8 @@ class Actor(nn.Module):
                  num_priv_explicit, 
                  num_hist, activation, 
                  tanh_encoder_output=False,
-                 total_raw_actor_inp_size=None) -> None:
+                 raw_deploy_actor_inp_size=None,
+                ) -> None:
         
 
         super().__init__()
@@ -95,9 +96,10 @@ class Actor(nn.Module):
         self.num_priv_explicit = num_priv_explicit
         self.if_scan_encode = scan_encoder_dims is not None and num_scan > 0
 
-        if total_raw_actor_inp_size == None:
-            raise ValueError("total_raw_actor_inp_size in actor was not set. This is important for policy onnx exporting.")
-        self.total_raw_actor_inp_size = total_raw_actor_inp_size
+        self.total_raw_actor_inp_size = raw_deploy_actor_inp_size
+       
+        if self.total_raw_actor_inp_size is None:
+            raise ValueError("total_raw_actor_inp_size used in onnx exporting was not assigned. there is an issue here. ")
 
         if len(priv_encoder_dims) > 0:
                     priv_encoder_layers = []
@@ -274,8 +276,11 @@ class Actor(nn.Module):
             if backbone_input.shape[1] != self.num_obs:
                 raise ValueError(f"backbone input should have shape of {self.num_obs} but it is of size {backbone_input}")
 
+            print(f"size of backbone: {backbone_input.shape}")
 
             backbone_output = self.actor_backbone(backbone_input)
+
+
             return backbone_output
         
         else:
@@ -459,9 +464,9 @@ class Actor(nn.Module):
 
         return self.history_encoder(hist_interleaved)
     
-    def infer_scandots_latent(self, obs):
-        scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
-        return self.scan_encoder(scan)
+    # def infer_scandots_latent(self, obs):
+    #     scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
+    #     return self.scan_encoder(scan)
 
 class ActorCriticRMA(nn.Module):
     is_recurrent = False
@@ -521,6 +526,13 @@ class ActorCriticRMA(nn.Module):
 
         self.raw_actor_obs_input = num_actor_obs
 
+        self.deploy_policy_input = self.raw_actor_obs_input - num_priv_latent - num_priv_explicit
+
+        #num_priv_latent is priviledged information and will not be deployed
+        #for blind we dont have num_scan. Note that the actual observaiton size fed into the real actor will be different as we generate different obs's
+        #from our proprio
+
+       
         ############c############
         if num_hist_for_actor_backbone_proprio > num_hist:
             raise ValueError(f"'num_hist_for_actor_backbone_proprio' should be less than 'num_hist', it is of size {num_hist_for_actor_backbone_proprio}")
@@ -558,7 +570,8 @@ class ActorCriticRMA(nn.Module):
                            num_hist, 
                            get_activation(activation), 
                            tanh_encoder_output=kwargs['tanh_encoder_output'],
-                           total_raw_actor_inp_size=self.raw_actor_obs_input)
+                           raw_deploy_actor_inp_size=self.deploy_policy_input,
+                           )
         ####################cn#######################
 
         # actor observation normalization

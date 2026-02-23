@@ -241,8 +241,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     num_priv_latent = env_cfg.n_priv_latent
     num_prop = env_cfg.n_proprio
     history_len = env_cfg.history_len
+    num_actor_backbone_prop_hist = env_cfg.history_len_for_regular_proprio_actor
 
-    export_policy_as_onnx_custom(policy_nn, estimator_nn, num_scan, priv_states_dim, num_priv_latent, num_prop, history_len, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
+    export_policy_as_onnx_custom(policy_nn, estimator_nn, num_scan, priv_states_dim, num_priv_latent, num_prop, history_len, num_actor_backbone_prop_hist,normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
 
  
 
