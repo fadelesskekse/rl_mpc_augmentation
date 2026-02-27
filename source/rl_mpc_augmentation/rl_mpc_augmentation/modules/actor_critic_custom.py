@@ -276,7 +276,7 @@ class Actor(nn.Module):
             if backbone_input.shape[1] != self.num_obs:
                 raise ValueError(f"backbone input should have shape of {self.num_obs} but it is of size {backbone_input}")
 
-            print(f"size of backbone: {backbone_input.shape}")
+           # print(f"size of backbone: {backbone_input.shape}")
 
             backbone_output = self.actor_backbone(backbone_input)
 

@@ -90,7 +90,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
         #max_init_terrain_level=PLAYGROUND.num_rows - 1,
-        max_init_terrain_level=5,
+        max_init_terrain_level=0,
         
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -303,9 +303,9 @@ class ObservationsCfg:
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
         last_action = ObsTerm(func=mdp.last_action,history_length=5)
 
-        gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
-                                                            "offset": [0,.5],
-                                                            },history_length=5)
+        # gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
+        #                                                     "offset": [0,.5],
+        #                                                     },history_length=5)
 
 
         # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
@@ -358,9 +358,9 @@ class ObservationsCfg:
         # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
         #                                                     "offset": [0,.5],
         #                                                     })
-        gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={ #NOT SENSITIVE
-                                                            "offset": [0,.5],
-                                                            },history_length=5)
+        # gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={ #NOT SENSITIVE
+        #                                                     "offset": [0,.5],
+        #                                                     },history_length=5)
 
 
        # def __post_init__(self):
@@ -480,7 +480,7 @@ class EventCfg:
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity_delayed,
         mode="interval",
-        interval_range_s=(.25, 7),
+        interval_range_s=(.25, 12),
         params={"velocity_range": {"x": (-.5, .5), "y": (-.5, .5)},"curr_lim":.5} #was +-.5
                
     )
@@ -503,9 +503,9 @@ class RewardsCfg:
     # (1) Constant running reward
     alive = RewTerm(func=mdp.is_alive, weight=.15)
 
-    term_time = RewTerm(func=mdp.is_terminated_term_time_out_included, weight=-1,params={"term_keys": "time_out"})
-    term_bad_ori = RewTerm(func=mdp.is_terminated_term_time_out_included, weight=-3.5,params={"term_keys": "bad_orientation"})
-    term_height = RewTerm(func=mdp.is_terminated_term_time_out_included, weight=-2,params={"term_keys": "base_height"})
+    # term_time = RewTerm(func=mdp.is_terminated_term_time_out_included, weight=-1,params={"term_keys": "time_out"})
+    # term_bad_ori = RewTerm(func=mdp.is_terminated_term_time_out_included, weight=-3.5,params={"term_keys": "bad_orientation"})
+    # term_height = RewTerm(func=mdp.is_terminated_term_time_out_included, weight=-2,params={"term_keys": "base_height"})
    # term_comp = RewTerm(func=mdp.is_terminated_term_time_out_included, weight=100,params={"term_keys": "course_complete"})
                       
 
