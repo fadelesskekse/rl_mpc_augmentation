@@ -75,7 +75,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         prim_path="/World/ground",
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
-       # max_init_terrain_level=PLAYGROUND.num_rows - 1,
+        #max_init_terrain_level=PLAYGROUND.num_rows - 1,
         max_init_terrain_level=0,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -149,7 +149,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel_cust)
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
 
 ##
@@ -161,45 +161,61 @@ class CommandsCfg:
 
     # base_velocity = mdp.UniformLevelVelocityCommandCfg(
     #     asset_name="robot",
-    #     resampling_time_range=(10, 10),
-    #     rel_standing_envs=0,
+    #     resampling_time_range=(2, 12),
+    #     rel_standing_envs=0.05,
     #     rel_heading_envs=1.0,
     #     heading_command=False,
 
     #     debug_vis=False,
         
+    #     # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+    #     #     lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+    #     # ),
+    #     # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+    #     #     lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+    #     # ),
+
     #     ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-    #         lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+    #         lin_vel_x=(-.1, .1), lin_vel_y=(-.1, 0.1), ang_vel_z=(-.1, 0.1)
     #     ),
     #     limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-    #         lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+    #         lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-3.14, 3.14)
     #     ),
 
-    #     # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-    #     #     lin_vel_x=(1, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
-    #     # ),
+
+
     # )
 
     base_velocity = mdp.UniformLevelVelocityCommandCfgClip(
         asset_name="robot",
-        resampling_time_range=(2, 4),
-        rel_standing_envs=0,
+        resampling_time_range=(2, 12),
+        rel_standing_envs=.05,
         rel_heading_envs=1.0,
         heading_command=False,
         debug_vis=False,
         clip_threshold=.5,
-        clip_start_threshold=1,
+        clip_start_threshold=2,
         
+        # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+        #     lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+        # ),
+        # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+        #     lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+        # ),
+
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
-        ),
-        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(-.1, .1), lin_vel_y=(-.1, 0.1), ang_vel_z=(-.1, 0.1)
         ),
 
-        # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(1, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+        # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+        #     lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2, 2)
         # ),
+
+        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+            lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2.0, 2.0)
+        ),
+
+ 
     )
 
 @configclass
@@ -214,6 +230,7 @@ class ActionsCfg:
         joint_names=[".*"], 
         scale=.25, #0.25
         use_default_offset=True,
+        #preserve_order = True,
         #clip={"a":(1,1)},
         
     )
@@ -222,7 +239,7 @@ class ActionsCfg:
         asset_name="robot",
         num_vars = 1,
         var_names = ["gait_cycle",],
-        clip = {"gait_cycle": (.4, 2)}
+        clip = {"gait_cycle": (.3, 2)}
         )
 
 @configclass
@@ -276,9 +293,9 @@ class ObservationsCfg:
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
         last_action = ObsTerm(func=mdp.last_action,history_length=5)
 
-        gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
-                                                            "offset": [0,.5],
-                                                            },history_length=5)
+        # gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
+        #                                                     "offset": [0,.5],
+        #                                                     },history_length=5)
 
 
         # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
@@ -333,9 +350,9 @@ class ObservationsCfg:
         # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
         #                                                     "offset": [0,.5],
         #                                                     })
-        gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={ #NOT SENSITIVE
-                                                            "offset": [0,.5],
-                                                            },history_length=5)
+        # gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={ #NOT SENSITIVE
+        #                                                     "offset": [0,.5],
+        #                                                     },history_length=5)
 
 
        # def __post_init__(self):
@@ -456,7 +473,7 @@ class EventCfg:
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity_delayed,
         mode="interval",
-        interval_range_s=(.25, 7),
+        interval_range_s=(.25, 12),
         params={"velocity_range": {"x": (-.5, .5), "y": (-.5, .5)},"curr_lim":.5} #was +-.5
                
     )
@@ -511,7 +528,7 @@ class RewardsCfg:
     # Justification: Keep energy minimal, concurrent actions similar, minimize fast joints
     joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.15)
 
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
     dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
@@ -596,7 +613,7 @@ class RewardsCfg:
 
     gait = RewTerm(
         func=mdp.gait,
-        weight=0.5,
+        weight=1.5,
         params={
             #"period": 0.6,
             "offset": [0.0, 0.5],
@@ -652,7 +669,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    #base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.2})
+    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": -5})
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
     course_complete = DoneTerm(func=mdp.sub_terrain_out_of_bounds, params={
         "distance_buffer": 0,
@@ -708,14 +725,14 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
         # self.observations.critic.joint_vel_rel.history_length=self.history_len
 
         self.decimation = 4
-        self.episode_length_s = 7
+        self.episode_length_s = 12
         # viewer settings
         self.viewer.eye = (8.0, 0.0, 5.0)
         # simulation settings
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
 
-        self.sim.physx.gpu_collision_stack_size = 155_000_000
+        self.sim.physx.gpu_collision_stack_size = 200_000_000
         self.sim.physics_material = self.scene.terrain.physics_material
         self.sim.physx.gpu_max_rigid_patch_count = 10 * 2**15
 
@@ -738,11 +755,11 @@ class RlMpcAugmentationEnvCfg(ManagerBasedRLEnvCfg):
 class RobotPlayEnvCfg(RlMpcAugmentationEnvCfg):
     def __post_init__(self):
         super().__post_init__()
-        #self.scene.num_envs = 32
-        self.episode_length_s = 7
+        self.scene.num_envs = 100
+        self.episode_length_s = 12
 
-        self.use_hist_encoder = False
-        self.use_estimator = False
+        self.use_hist_encoder = True
+        self.use_estimator = True
 
 
         self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges

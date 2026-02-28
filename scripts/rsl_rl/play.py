@@ -9,6 +9,7 @@
 
 import argparse
 import sys
+import copy
 
 from isaaclab.app import AppLauncher
 from torch.utils.tensorboard import SummaryWriter
@@ -73,7 +74,9 @@ from isaaclab.utils.assets import retrieve_file_path
 from isaaclab.utils.dict import print_dict
 from isaaclab.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
 
-from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper, export_policy_as_jit, export_policy_as_onnx
+from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper#, export_policy_as_jit, export_policy_as_onnx
+
+from exporter_custom import export_policy_as_onnx_custom
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path
@@ -176,6 +179,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     #env.global_iteration = 10000
     
     env = RslRlVecEnvWrapperCustom(env, clip_actions=agent_cfg.clip_actions)
+    
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
@@ -195,12 +199,18 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     #This returns the function inference() to be called
     estimator = runner.get_estimator_inference_policy(device=env.device)
+    estimator_nn = None
 
     # extract the neural network module
     # we do this in a try-except to maintain backwards compatibility.
     try:
         # version 2.3 onwards
         policy_nn = runner.alg.policy
+
+        if hasattr(runner.alg, "estimator"):
+           # print(f"I have an estimator")
+            estimator_nn = runner.alg.estimator
+
         #print(f"AmI here?")
     except AttributeError:
         # version 2.2 and below
@@ -226,7 +236,16 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     #export_policy_as_jit(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.pt") #failing here
     
     #export_policy_as_onnx(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
-    
+    num_scan = env_cfg.n_scan
+    priv_states_dim = env_cfg.n_priv
+    num_priv_latent = env_cfg.n_priv_latent
+    num_prop = env_cfg.n_proprio
+    history_len = env_cfg.history_len
+    num_actor_backbone_prop_hist = env_cfg.history_len_for_regular_proprio_actor
+
+    export_policy_as_onnx_custom(policy_nn, estimator_nn, num_scan, priv_states_dim, num_priv_latent, num_prop, history_len, num_actor_backbone_prop_hist,normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
+
+ 
 
     dt = env.unwrapped.step_dt
 

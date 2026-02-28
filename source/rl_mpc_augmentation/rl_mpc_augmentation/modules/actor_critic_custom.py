@@ -62,7 +62,7 @@ class StateHistoryEncoder(nn.Module):
         output = self.conv_layers(projection.reshape([nd, T, -1]).permute((0, 2, 1)))
         output = self.linear_output(output)
 
-       # print(f"hist encoder output shape: {output.shape}")
+        #print("I am enteringi the history forward encoder.")
         return output
     
 class Actor(nn.Module):
@@ -78,7 +78,9 @@ class Actor(nn.Module):
                  num_priv_latent, 
                  num_priv_explicit, 
                  num_hist, activation, 
-                 tanh_encoder_output=False) -> None:
+                 tanh_encoder_output=False,
+                 raw_deploy_actor_inp_size=None,
+                ) -> None:
         
 
         super().__init__()
@@ -93,6 +95,11 @@ class Actor(nn.Module):
         self.num_priv_latent = num_priv_latent
         self.num_priv_explicit = num_priv_explicit
         self.if_scan_encode = scan_encoder_dims is not None and num_scan > 0
+
+        self.total_raw_actor_inp_size = raw_deploy_actor_inp_size
+       
+        if self.total_raw_actor_inp_size is None:
+            raise ValueError("total_raw_actor_inp_size used in onnx exporting was not assigned. there is an issue here. ")
 
         if len(priv_encoder_dims) > 0:
                     priv_encoder_layers = []
@@ -167,6 +174,7 @@ class Actor(nn.Module):
         if not eval:
            # print(f"obs shape passed to actor forward: {obs.shape}")
             if self.if_scan_encode: #Do we want to encode the scan dots? 
+                
                 #print(f"obs in forward actor pass: {obs}")
                 #obs_scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
                 obs_scan = obs[:,:self.num_scan]
@@ -224,7 +232,7 @@ class Actor(nn.Module):
             else:
 
                 latent = self.infer_priv_latent(obs)
-               # print("I am using priv encoder")
+              #  print("I am using priv encoder")
                  # Adaptation module update
                # with torch.inference_mode():
                    # print(f"priv latenet: {self.infer_priv_latent(obs)}")
@@ -268,8 +276,11 @@ class Actor(nn.Module):
             if backbone_input.shape[1] != self.num_obs:
                 raise ValueError(f"backbone input should have shape of {self.num_obs} but it is of size {backbone_input}")
 
+           # print(f"size of backbone: {backbone_input.shape}")
 
             backbone_output = self.actor_backbone(backbone_input)
+
+
             return backbone_output
         
         else:
@@ -321,13 +332,15 @@ class Actor(nn.Module):
 
             if obs_priv_explicit.shape[1] != self.num_priv_explicit:
                 raise ValueError(f"obs_priv_explicit should be of size {self.num_priv_explicit}, but it of size {obs_priv_explicit.shape[1]}")
-            
+          #  print("hi ")
            # print(f"hist_encoding: {hist_encoding}")
             if hist_encoding:
+               # print("hist encoding on ")
                 latent = self.infer_hist_latent(obs)
             else:
                # print("We are using priv_latent")
               #  print(f"shape of obs passed {obs.shape}")
+               # print("hist encoding off ")
                 latent = self.infer_priv_latent(obs)
 
             #print(f"size of latent: {latent.size}")
@@ -451,9 +464,9 @@ class Actor(nn.Module):
 
         return self.history_encoder(hist_interleaved)
     
-    def infer_scandots_latent(self, obs):
-        scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
-        return self.scan_encoder(scan)
+    # def infer_scandots_latent(self, obs):
+    #     scan = obs[:, self.num_prop:self.num_prop + self.num_scan]
+    #     return self.scan_encoder(scan)
 
 class ActorCriticRMA(nn.Module):
     is_recurrent = False
@@ -511,6 +524,15 @@ class ActorCriticRMA(nn.Module):
             assert len(obs[obs_group].shape) == 2, "The ActorCritic module only supports 1D observations."
             num_actor_obs += obs[obs_group].shape[-1]
 
+        self.raw_actor_obs_input = num_actor_obs
+
+        self.deploy_policy_input = self.raw_actor_obs_input - num_priv_latent - num_priv_explicit
+
+        #num_priv_latent is priviledged information and will not be deployed
+        #for blind we dont have num_scan. Note that the actual observaiton size fed into the real actor will be different as we generate different obs's
+        #from our proprio
+
+       
         ############c############
         if num_hist_for_actor_backbone_proprio > num_hist:
             raise ValueError(f"'num_hist_for_actor_backbone_proprio' should be less than 'num_hist', it is of size {num_hist_for_actor_backbone_proprio}")
@@ -547,7 +569,9 @@ class ActorCriticRMA(nn.Module):
                            num_priv_explicit, 
                            num_hist, 
                            get_activation(activation), 
-                           tanh_encoder_output=kwargs['tanh_encoder_output'])
+                           tanh_encoder_output=kwargs['tanh_encoder_output'],
+                           raw_deploy_actor_inp_size=self.deploy_policy_input,
+                           )
         ####################cn#######################
 
         # actor observation normalization

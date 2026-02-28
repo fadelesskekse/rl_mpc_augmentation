@@ -13,6 +13,7 @@ from .rewards import *  # noqa: F401, F403
 from .events.events import *
 from .terminations import *  # noqa: F401, F403
 from .observations.observations import *
+from .curriculums.curriculums import *
 from .actions.pass_to_env_action_cfg import *
 from .commands.velocity_command_cfg_clip import *
 from .commands.commands_cfg import *

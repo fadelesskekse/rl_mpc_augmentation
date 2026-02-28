@@ -150,7 +150,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         )[0].tolist())
     ),
     ray_alignment="yaw",
-    max_distance=7,
+    max_distance=100,
 
 
 
@@ -175,7 +175,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel_cust)
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
 
 ##
@@ -216,16 +216,26 @@ class CommandsCfg:
         clip_threshold=.5,
         clip_start_threshold=1,
         
+        # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+        #     lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+        # ),
+        # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+        #     lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+        # ),
+
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
-        ),
-        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(0, .1), lin_vel_y=(-.1, 0.1), ang_vel_z=(-.1, 0.1)
         ),
 
-        # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(1, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+        # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+        #     lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2, 2)
         # ),
+
+        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+            lin_vel_x=(0, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2.0, 2.0)
+        ),
+
+
     )
 
 @configclass
@@ -303,9 +313,9 @@ class ObservationsCfg:
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"},history_length=5)
         last_action = ObsTerm(func=mdp.last_action,history_length=5)
 
-        gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
-                                                            "offset": [0,.5],
-                                                            },history_length=5)
+        # gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={
+        #                                                     "offset": [0,.5],
+        #                                                     },history_length=5)
 
 
         # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
@@ -328,7 +338,7 @@ class ObservationsCfg:
 
         # # # # observation terms (order preserved)
         scan_dot = ObsTerm(func=mdp.scan_dot, 
-                scale = .1,
+                scale = 1,
                 params={
                     "sensor_cfg": SceneEntityCfg("scan_dot",),
                    # "asset_cfg": SceneEntityCfg("robot", body_names=".*torso_link.*"),
@@ -358,9 +368,9 @@ class ObservationsCfg:
         # gait_phase = ObsTerm(func = mdp.gait_cycle, params={"period": .6,
         #                                                     "offset": [0,.5],
         #                                                     })
-        gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={ #NOT SENSITIVE
-                                                            "offset": [0,.5],
-                                                            },history_length=5)
+        # gait_phase = ObsTerm(func = mdp.gait_cycle_var, params={ #NOT SENSITIVE
+        #                                                     "offset": [0,.5],
+        #                                                     },history_length=5)
 
 
        # def __post_init__(self):
