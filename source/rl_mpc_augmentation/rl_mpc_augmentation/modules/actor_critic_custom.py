@@ -172,6 +172,7 @@ class Actor(nn.Module):
 
       #  print(f"eval : {eval}")
         if not eval:
+
            # print(f"obs shape passed to actor forward: {obs.shape}")
             if self.if_scan_encode: #Do we want to encode the scan dots? 
                 

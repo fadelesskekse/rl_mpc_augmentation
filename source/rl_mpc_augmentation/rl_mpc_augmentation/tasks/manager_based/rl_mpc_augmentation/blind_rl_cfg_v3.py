@@ -26,7 +26,8 @@ from isaaclab.utils import configclass
 
 from . import mdp
 
-from assets.g1.g1_bm import G1_BM_CFG # pyright: ignore[reportMissingImports]
+from assets.g1.g1_bm import G1_BM_CFG, G1_BM_ACTION_SCALE,JOINT_NAMES_EXPR# pyright: ignore[reportMissingImports]
+#from assets.g1.constants import JOINT_NAMES_EXPR
 
 PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0),
@@ -149,7 +150,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel_cust)
+    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)#_cust
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
 
 ##
@@ -229,6 +230,7 @@ class ActionsCfg:
         asset_name="robot", 
         joint_names=[".*"], 
         scale=.25, #0.25
+        #joint_names=JOINT_NAMES_EXPR,
         use_default_offset=True,
         #preserve_order = True,
         #clip={"a":(1,1)},
@@ -283,8 +285,24 @@ class ObservationsCfg:
 
        # priv_latent = ObsTerm(func=mdp.priv_latent, history_length=0)
 
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,history_length=10, noise=Unoise(n_min=-0.01, n_max=0.01),) #updated in post init 
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, history_length=10, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5),)
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,
+                            #    params={
+                            #         "asset_cfg": SceneEntityCfg(
+                            #            "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True
+                            #         )
+                            #    },
+                                history_length=10, 
+                                noise=Unoise(n_min=-0.01, n_max=0.01),) #updated in post init 
+        
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, 
+                            #    params={
+                            #        "asset_cfg": SceneEntityCfg(
+                            #            "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True
+                            #        )
+                            #     },
+                                history_length=10, 
+                                scale=0.05, 
+                                noise=Unoise(n_min=-1.5, n_max=1.5),)
 
         ########END EXTREME PARKOUS OBS#################
 
@@ -337,8 +355,20 @@ class ObservationsCfg:
         priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0,scale=1)#not sensitive
         priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0,scale=1)#not sensitive
 
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,history_length=10)
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, history_length=10,scale=0.05,)
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,
+                            #    params={
+                            #        "asset_cfg": SceneEntityCfg(
+                            #            "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True
+                            #        )
+                            #    },
+                                history_length=10)
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, 
+                            #    params={
+                            #        "asset_cfg": SceneEntityCfg(
+                            #            "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True
+                            #        )
+                            #    },
+                                history_length=10,scale=0.05,)
 
         ########END EXTREME PARKOUS OBS#################
 

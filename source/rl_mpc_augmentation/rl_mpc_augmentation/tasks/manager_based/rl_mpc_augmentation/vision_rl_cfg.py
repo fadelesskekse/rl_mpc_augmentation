@@ -490,7 +490,7 @@ class EventCfg:
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity_delayed,
         mode="interval",
-        interval_range_s=(.25, 7),
+        interval_range_s=(.25, 12),
         params={"velocity_range": {"x": (-.5, .5), "y": (-.5, .5)},"curr_lim":.5} #was +-.5
                
     )
