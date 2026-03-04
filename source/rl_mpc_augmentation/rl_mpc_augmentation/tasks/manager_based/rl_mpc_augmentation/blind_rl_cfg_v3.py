@@ -228,11 +228,11 @@ class ActionsCfg:
     # as it will learn to scale the position outputs as needed.
     JointPositionAction = mdp.JointPositionActionCfg(
         asset_name="robot", 
-        joint_names=[".*"], 
-        scale=.25, #0.25
-        #joint_names=JOINT_NAMES_EXPR,
+        #joint_names=[".*"], 
+        scale=G1_BM_ACTION_SCALE, #0.25
+        joint_names=JOINT_NAMES_EXPR,
         use_default_offset=True,
-        #preserve_order = True,
+        preserve_order = True,
         #clip={"a":(1,1)},
         
     )
@@ -276,8 +276,14 @@ class ObservationsCfg:
 
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=0) #Will be replaced by estimator output during rollouts, and will be used as ground truth during learning phase
         
-        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1,params={"scale_val": .2})
-        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1,params={"scale_val": .2})
+        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1,params={"scale_val": .2,
+                                                                                                                    "asset_cfg": SceneEntityCfg(
+                                                                                                                    "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True),
+                                                                                                                    })
+        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1,params={"scale_val": .2,
+                                                                                                                "asset_cfg": SceneEntityCfg(
+                                                                                                                "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True),
+                                                                                                                })
         priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass,params={"asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
                                                                      "scale_val": .2}, history_length=0,scale=1,)
         priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0)
@@ -286,20 +292,20 @@ class ObservationsCfg:
        # priv_latent = ObsTerm(func=mdp.priv_latent, history_length=0)
 
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,
-                            #    params={
-                            #         "asset_cfg": SceneEntityCfg(
-                            #            "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True
-                            #         )
-                            #    },
+                               params={
+                                    "asset_cfg": SceneEntityCfg(
+                                       "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True
+                                    ),
+                               },
                                 history_length=10, 
                                 noise=Unoise(n_min=-0.01, n_max=0.01),) #updated in post init 
         
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, 
-                            #    params={
-                            #        "asset_cfg": SceneEntityCfg(
-                            #            "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True
-                            #        )
-                            #     },
+                               params={
+                                   "asset_cfg": SceneEntityCfg(
+                                       "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True
+                                   ),
+                                },
                                 history_length=10, 
                                 scale=0.05, 
                                 noise=Unoise(n_min=-1.5, n_max=1.5),)
@@ -348,26 +354,33 @@ class ObservationsCfg:
 
        #IMPORTANT: YOU NEED TO CHANGE THE SCALE_VAL FOR PRIV STIFFNESS/DAMPING/MASS WHENEVER
        #YOU CHANGE THE DOMAIN RANDOMIZATION OF THE SAME TERMS
-        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1,params={"scale_val": .2})#not sensitive
-        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1,params={"scale_val": .2})#not sensitive
+        priv_latent_gains_stiffness = ObsTerm(func=mdp.priv_latent_gains_stiffness, history_length=0,scale=1,params={"scale_val": .2,
+                                                                                                                    "asset_cfg": SceneEntityCfg(
+                                                                                                                    "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True),
+                                                                                                                    })
+        priv_latent_gains_damping = ObsTerm(func=mdp.priv_latent_gains_damping, history_length=0,scale=1,params={"scale_val": .2,
+                                                                                                                "asset_cfg": SceneEntityCfg(
+                                                                                                                "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True),
+                                                                                                                })
+
         priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass,params={"asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
                                                                      "scale_val": .2}, history_length=0,scale=1)#not sensitive
         priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0,scale=1)#not sensitive
         priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0,scale=1)#not sensitive
 
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel,
-                            #    params={
-                            #        "asset_cfg": SceneEntityCfg(
-                            #            "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True
-                            #        )
-                            #    },
+                               params={
+                                   "asset_cfg": SceneEntityCfg(
+                                       "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True
+                                   )
+                               },
                                 history_length=10)
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, 
-                            #    params={
-                            #        "asset_cfg": SceneEntityCfg(
-                            #            "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True
-                            #        )
-                            #    },
+                               params={
+                                   "asset_cfg": SceneEntityCfg(
+                                       "robot", joint_names=JOINT_NAMES_EXPR, preserve_order=True
+                                   )
+                               },
                                 history_length=10,scale=0.05,)
 
         ########END EXTREME PARKOUS OBS#################
@@ -444,16 +457,12 @@ class EventCfg:
         func=mdp.randomize_actuator_gains,
         mode="startup",
         params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+            "asset_cfg": SceneEntityCfg("robot", joint_names=JOINT_NAMES_EXPR,preserve_order=True),
             "stiffness_distribution_params":(.8,1.2), #was .8 to 1.2
             "damping_distribution_params": (.8,1.2),
             "operation": "scale"
         },
     )
-
- 
- 
-
 
 
     # # reset
@@ -492,6 +501,7 @@ class EventCfg:
         func=mdp.reset_joints_by_scale,
         mode="reset",
         params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=JOINT_NAMES_EXPR,preserve_order=True),
             "position_range": (1.0, 1.0),
             "velocity_range": (-1.0, 1.0),
         },
@@ -560,8 +570,9 @@ class RewardsCfg:
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.15)
 
-    dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
-    dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9})
+    dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0,params={"asset_cfg": SceneEntityCfg("robot", joint_names=JOINT_NAMES_EXPR,preserve_order=True)})
+    dof_vel_limits = RewTerm(func=mdp.joint_vel_limits, weight=-5.0, params={"soft_ratio": .9,
+                                                                             "asset_cfg": SceneEntityCfg("robot", joint_names=JOINT_NAMES_EXPR,preserve_order=True)})
 
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
