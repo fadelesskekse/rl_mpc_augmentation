@@ -77,7 +77,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
         #max_init_terrain_level=PLAYGROUND.num_rows - 1,
-        max_init_terrain_level=6,
+        max_init_terrain_level=0,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -427,17 +427,17 @@ class EventCfg:
         },
     )
 
-    change_base_com = EventTerm(
-        func=mdp.randomize_rigid_body_com,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "com_range": {"x": (-0.05, .05),
-                          "y": (-0.05, .05),
-                          "z": (-0.05, .05),}
+    # change_base_com = EventTerm(
+    #     func=mdp.randomize_rigid_body_com,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+    #         "com_range": {"x": (-0.05, .05),
+    #                       "y": (-0.05, .05),
+    #                       "z": (-0.05, .05),}
      
-        },
-    )
+    #     },
+    # )
 
     # (2) Randomize mass of base link
     #Justification: Domain Randomization
@@ -450,8 +450,7 @@ class EventCfg:
             "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
             "mass_distribution_params": (.8, 1.2), #was .8 to 1.2
             "operation": "scale",
-            "recompute_inertia": True,
-            
+            #"recompute_inertia": True, 
         },
     )
 
@@ -460,7 +459,8 @@ class EventCfg:
         func=mdp.randomize_actuator_gains,
         mode="startup",
         params={
-            "asset_cfg": SceneEntityCfg("robot"),#, joint_names=JOINT_NAMES_EXPR,preserve_order=True),
+            # "asset_cfg": SceneEntityCfg("robot"),#, joint_names=JOINT_NAMES_EXPR,preserve_order=True),
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
             "stiffness_distribution_params":(.8,1.2), #was .8 to 1.2
             "damping_distribution_params": (.8,1.2),
             "operation": "scale"
