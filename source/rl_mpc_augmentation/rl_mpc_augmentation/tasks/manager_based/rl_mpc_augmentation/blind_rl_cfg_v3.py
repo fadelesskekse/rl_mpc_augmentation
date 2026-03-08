@@ -427,17 +427,17 @@ class EventCfg:
         },
     )
 
-    # change_base_com = EventTerm(
-    #     func=mdp.randomize_rigid_body_com,
-    #     mode="startup",
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-    #         "com_range": {"x": (-0.05, .05),
-    #                       "y": (-0.05, .05),
-    #                       "z": (-0.05, .05),}
+    change_base_com = EventTerm(
+        func=mdp.randomize_rigid_body_com,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+            "com_range": {"x": (-0.05, .05),
+                          "y": (-0.05, .05),
+                          "z": (-0.05, .05),}
      
-    #     },
-    # )
+        },
+    )
 
     # (2) Randomize mass of base link
     #Justification: Domain Randomization
@@ -460,7 +460,7 @@ class EventCfg:
         func=mdp.randomize_actuator_gains,
         mode="startup",
         params={
-            #"asset_cfg": SceneEntityCfg("robot", joint_names=JOINT_NAMES_EXPR,preserve_order=True),
+            "asset_cfg": SceneEntityCfg("robot"),#, joint_names=JOINT_NAMES_EXPR,preserve_order=True),
             "stiffness_distribution_params":(.8,1.2), #was .8 to 1.2
             "damping_distribution_params": (.8,1.2),
             "operation": "scale"
