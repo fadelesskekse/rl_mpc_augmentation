@@ -189,7 +189,7 @@ class CommandsCfg:
 
     base_velocity = mdp.UniformLevelVelocityCommandCfgClip(
         asset_name="robot",
-        resampling_time_range=(2, 12),
+        resampling_time_range=(.25, 12),
         rel_standing_envs=.05,
         rel_heading_envs=1.0,
         heading_command=False,
@@ -286,7 +286,7 @@ class ObservationsCfg:
                                                                                                                 })
         priv_latent_mass = ObsTerm(func=mdp.priv_latent_mass,params={"asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
                                                                      "scale_val": .2}, history_length=0,scale=1,)
-        priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0)
+        priv_latent_com = ObsTerm(func=mdp.priv_latent_com, history_length=0,scale=5)
         priv_latent_friction= ObsTerm(func=mdp.priv_latent_friction, history_length=0)
 
        # priv_latent = ObsTerm(func=mdp.priv_latent, history_length=0)
@@ -427,17 +427,17 @@ class EventCfg:
         },
     )
 
-    # change_base_com = EventTerm(
-    #     func=mdp.randomize_rigid_body_com,
-    #     mode="startup",
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-    #         "com_range": {"x": (-0.05, .05),
-    #                       "y": (-0.05, .05),
-    #                       "z": (-0.05, .05),}
+    change_base_com = EventTerm(
+        func=mdp.randomize_rigid_body_com,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+            "com_range": {"x": (-0.05, .05),
+                          "y": (-0.05, .05),
+                          "z": (-0.05, .05),}
      
-    #     },
-    # )
+        },
+    )
 
     # (2) Randomize mass of base link
     #Justification: Domain Randomization
@@ -569,8 +569,8 @@ class RewardsCfg:
 
     # (5) Minimize joint effort, action_rate, energy, and penalize hitting joint limit
     # Justification: Keep energy minimal, concurrent actions similar, minimize fast joints
-    joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
-    joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
+    joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.002)#-.001
+    joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-5.0e-7)#-2.5e-7
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.15)
 
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0,)#params={"asset_cfg": SceneEntityCfg("robot", joint_names=JOINT_NAMES_EXPR,preserve_order=True)})

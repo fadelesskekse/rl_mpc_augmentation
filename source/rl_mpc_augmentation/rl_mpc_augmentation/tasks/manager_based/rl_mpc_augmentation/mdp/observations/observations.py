@@ -339,7 +339,7 @@ def priv_latent_com(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntit
     com = asset.root_physx_view.get_coms()[:,9,:3].to(device)
 
    # return torch.ones_like(com)
-
+    
     return com
     #return torch.ones_like(com)*100
 
