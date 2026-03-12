@@ -268,7 +268,7 @@ def priv_latent_gains_stiffness(
   # print(f"stiffness random: {stiffness}")
 
     return stiffness_norm
-    #return torch.ones_like(stiffness_norm)*100
+    #return torch.ones_like(stiffness_norm)*10
 
 def priv_latent_gains_damping(
     env: ManagerBasedEnv,
@@ -291,7 +291,7 @@ def priv_latent_gains_damping(
     #print(f"damping_norm: {damping_norm}")
 
     return damping_norm
-    #return torch.ones_like(damping_norm)*100
+    #return torch.ones_like(damping_norm)*10
 
 
 def priv_latent_mass(
@@ -326,7 +326,7 @@ def priv_latent_mass(
    # print(f"mass norm {mass_norm}")
 
     return mass_norm
-    #return torch.ones_like(mass_norm)*100
+    #return torch.ones_like(mass_norm)
 
     
 
@@ -338,7 +338,7 @@ def priv_latent_com(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntit
 
     com = asset.root_physx_view.get_coms()[:,9,:3].to(device)
 
-   # return torch.ones_like(com)
+    #return torch.ones_like(com)*5
     
     return com
     #return torch.ones_like(com)*100
@@ -371,7 +371,7 @@ def priv_latent_friction(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = Scene
         dim=-1
     )
 
-    #return torch.ones_like(priv)*0
+    #return torch.ones_like(priv)*10
 
     return priv
 
