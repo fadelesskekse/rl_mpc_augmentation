@@ -90,14 +90,17 @@ class PPORunnerCfgCustom(RslRlOnPolicyRunnerCfg):
     policy = RslRlPpoActorCriticCfgCustom(
         class_name="ActorCriticRMA",
         init_noise_std=1,
-        actor_hidden_dims=[512, 256, 128],
-        critic_hidden_dims=[512, 256, 128],
+        #actor_hidden_dims=[512, 256, 128],
+        #critic_hidden_dims=[512, 256, 128],
+        actor_hidden_dims=[512, 256,128],
+        critic_hidden_dims=[768, 512, 256,128],
+        
         activation="elu",
         noise_std_type="log",
 
         scan_encoder_dims = [128, 64, 32],
         #priv_encoder_dims = [64, 20],
-        priv_encoder_dims = [128,64, 32],
+        priv_encoder_dims = [256,128, 64], #[128,64, 32]
         # only for 'ActorCriticRecurrent':
         rnn_type = 'lstm',
         rnn_hidden_size = 512,
@@ -122,8 +125,8 @@ class PPORunnerCfgCustom(RslRlOnPolicyRunnerCfg):
         max_grad_norm=1.0,
         # dagger params
         #dagger_update_freq = 20,
-        dagger_update_freq = 20000,
-        priv_reg_coef_schedual = [0, 0.1, 20000, 20000],#[0, 0.1, 2000, 3000],
+        dagger_update_freq = 100000,
+        priv_reg_coef_schedual = [0, 0.1, 100000, 100000],#[0, 0.1, 2000, 3000],
         priv_reg_coef_schedual_resume = [0, 0.1, 0, 1],
     )
 

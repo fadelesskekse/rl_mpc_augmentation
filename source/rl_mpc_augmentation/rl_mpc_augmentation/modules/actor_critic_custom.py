@@ -515,7 +515,7 @@ class ActorCriticRMA(nn.Module):
         #######c##########
         self.kwargs = kwargs
         priv_encoder_dims= kwargs['priv_encoder_dims']
-        
+        print(f"priv_encoder_dims {priv_encoder_dims}")
         #########cn#######
 
         # get the observation dimensions
