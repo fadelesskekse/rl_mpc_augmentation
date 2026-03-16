@@ -94,6 +94,7 @@ class PPORunnerCfgCustom(RslRlOnPolicyRunnerCfg):
         #critic_hidden_dims=[512, 256, 128],
         actor_hidden_dims=[512, 256,128],
         critic_hidden_dims=[768, 512, 256,128],
+        critic_obs_normalization=True,
         
         activation="elu",
         noise_std_type="log",

@@ -162,7 +162,7 @@ class CommandsCfg:
 
     # base_velocity = mdp.UniformLevelVelocityCommandCfg(
     #     asset_name="robot",
-    #     resampling_time_range=(2, 12),
+    #     resampling_time_range=(.25, 12),
     #     rel_standing_envs=0.05,
     #     rel_heading_envs=1.0,
     #     heading_command=False,
@@ -180,7 +180,7 @@ class CommandsCfg:
     #         lin_vel_x=(-.1, .1), lin_vel_y=(-.1, 0.1), ang_vel_z=(-.1, 0.1)
     #     ),
     #     limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-    #         lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-3.14, 3.14)
+    #         lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2.0 ,2.0)
     #     ),
 
 
