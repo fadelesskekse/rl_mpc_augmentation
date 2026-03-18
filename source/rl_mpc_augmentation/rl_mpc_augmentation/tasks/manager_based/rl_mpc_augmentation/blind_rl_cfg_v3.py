@@ -76,8 +76,8 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         prim_path="/World/ground",
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
-        #max_init_terrain_level=PLAYGROUND.num_rows - 1,
-        max_init_terrain_level=0,
+        max_init_terrain_level=PLAYGROUND.num_rows - 1,
+        #max_init_terrain_level=0,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -150,7 +150,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)#_cust
+    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel_cust)#_cust
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
 
 ##
@@ -160,14 +160,48 @@ class CurriculumCfg:
 @configclass 
 class CommandsCfg:
 
-    # base_velocity = mdp.UniformLevelVelocityCommandCfg(
+    base_velocity = mdp.UniformLevelVelocityCommandCfg(
+        asset_name="robot",
+        resampling_time_range=(.25, 12),
+        rel_standing_envs=0.05,
+        rel_heading_envs=1.0,
+        heading_command=False,
+
+        debug_vis=False,
+        
+        # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+        #     lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+        # ),
+        # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+        #     lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+        # ),
+
+        # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+        #     lin_vel_x=(-.1, .1), lin_vel_y=(-.1, 0.1), ang_vel_z=(-.1, 0.1)
+        # ),
+        ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+            lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2, 2)
+        ),
+        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+            lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2.0 ,2.0)
+        ),
+        # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+        #     lin_vel_x=(1, 1), lin_vel_y=(0, 0), ang_vel_z=(0.0 ,0.0)
+        # ),
+
+
+
+    )
+
+    # base_velocity = mdp.UniformLevelVelocityCommandCfgClip(
     #     asset_name="robot",
     #     resampling_time_range=(.25, 12),
-    #     rel_standing_envs=0.05,
+    #     rel_standing_envs=.05,
     #     rel_heading_envs=1.0,
     #     heading_command=False,
-
     #     debug_vis=False,
+    #     clip_threshold=.5,
+    #     clip_start_threshold=2,
         
     #     # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
     #     #     lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
@@ -179,45 +213,17 @@ class CommandsCfg:
     #     ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
     #         lin_vel_x=(-.1, .1), lin_vel_y=(-.1, 0.1), ang_vel_z=(-.1, 0.1)
     #     ),
+
+    #     # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+    #     #     lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2, 2)
+    #     # ),
+
     #     limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-    #         lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2.0 ,2.0)
+    #         lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2, 2)
     #     ),
 
-
-
-    # )
-
-    base_velocity = mdp.UniformLevelVelocityCommandCfgClip(
-        asset_name="robot",
-        resampling_time_range=(.25, 12),
-        rel_standing_envs=.05,
-        rel_heading_envs=1.0,
-        heading_command=False,
-        debug_vis=False,
-        clip_threshold=.5,
-        clip_start_threshold=2,
-        
-        # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(0, .1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
-        # ),
-        # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(0, 1), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
-        # ),
-
-        ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-.1, .1), lin_vel_y=(-.1, 0.1), ang_vel_z=(-.1, 0.1)
-        ),
-
-        # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2, 2)
-        # ),
-
-        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2, 2)
-        ),
-
  
-    )
+    # )
 
 @configclass
 class ActionsCfg:
@@ -514,10 +520,10 @@ class EventCfg:
     #Justification: Improve robustness by pushing robot at random
     # interval
     push_robot = EventTerm(
-        func=mdp.push_by_setting_velocity_delayed,
+        func=mdp.push_by_setting_velocity, #_delayed
         mode="interval",
         interval_range_s=(.25, 12),
-        params={"velocity_range": {"x": (-.5, .5), "y": (-.5, .5)},"curr_lim":.5} #was +-.5
+        params={"velocity_range": {"x": (-.5, .5), "y": (-.5, .5)}},#,"curr_lim":.5} #was +-.5
                
     )
 
@@ -527,6 +533,17 @@ class EventCfg:
 @configclass
 class RewardsCfg:
     """Reward terms for the MDP."""
+
+
+    soft_landing = RewTerm(
+        func=mdp.soft_landing,
+        weight=-5e-2,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["left_ankle_roll_link", "right_ankle_roll_link"]),
+            "command_name": "base_velocity",
+            "command_threshold": 0.15,
+        },
+    )
 
     # (1) Constant running reward
     alive = RewTerm(func=mdp.is_alive, weight=.15)

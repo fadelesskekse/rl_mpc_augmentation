@@ -17,6 +17,23 @@ import numpy as np
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
+def soft_landing(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, command_name: str, command_threshold: float) -> torch.Tensor:
+    """Penalize high impact forces at landing to encourage soft footfalls."""
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    sensor_data = contact_sensor.data
+    forces = sensor_data.net_forces_w[:, sensor_cfg.body_ids, :]  # (num_envs, num_bodies, 3)
+    force_magnitude = torch.norm(forces, dim=-1)  # (num_envs, num_bodies)
+    first_contact = contact_sensor.compute_first_contact(dt=env.step_dt)[:, sensor_cfg.body_ids]  # (num_envs, num_bodies)
+    landing_impact = force_magnitude * first_contact.float()
+    cost = torch.sum(landing_impact, dim=1)  # (num_envs,)
+    command = env.command_manager.get_command(command_name)
+    linear_norm = torch.norm(command[:, :2], dim=1)  # (num_envs,)
+    angular_norm = torch.abs(command[:, 2])  # (num_envs,)
+    total_command = linear_norm + angular_norm
+    actice = (total_command > command_threshold).float()
+    cost = cost * actice
+    return cost
+
 
 def ankle_torque_min(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     

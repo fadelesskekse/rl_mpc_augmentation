@@ -268,7 +268,7 @@ def priv_latent_gains_stiffness(
   # print(f"stiffness random: {stiffness}")
 
     return stiffness_norm
-    #return torch.ones_like(stiffness_norm)*10
+    #return torch.ones_like(stiffness_norm)*5
 
 def priv_latent_gains_damping(
     env: ManagerBasedEnv,
