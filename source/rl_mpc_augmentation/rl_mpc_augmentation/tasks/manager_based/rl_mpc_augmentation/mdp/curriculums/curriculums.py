@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from isaaclab.assets import Articulation
-from isaaclab.managers import SceneEntityCfg, TerminationManager
+from isaaclab.managers import SceneEntityCfg, TerminationManager ,ManagerTermBase,CurriculumTermCfg
 from isaaclab.terrains import TerrainImporter
 
 if TYPE_CHECKING:
@@ -196,3 +196,64 @@ def ang_vel_cmd_levels_cust(
             ).tolist()
 
     return torch.tensor(ranges.ang_vel_z[1], device=env.device)
+
+
+class modify_reward_weight_cust(ManagerTermBase):
+    """Curriculum that modifies the reward weight based on a step-wise schedule."""
+
+    def __init__(self, cfg: CurriculumTermCfg, env: ManagerBasedRLEnv):
+        super().__init__(cfg, env)
+        
+        # obtain term configuration
+        term_name = cfg.params["term_name"]
+        self._term_cfg = env.reward_manager.get_term_cfg(term_name)
+
+    def __call__(
+        self,
+        env: ManagerBasedRLEnv,
+        env_ids: Sequence[int],
+        term_name: str,
+        weights: list[float],
+        num_steps: list[int],
+    ) -> float:
+        # update term settings
+
+        num_steps_per_env = 24
+        total_iter = env.common_step_counter // num_steps_per_env
+
+        if len(weights) != len(num_steps) + 1:
+            raise ValueError(
+                "weights must have exactly one more element than num_steps. "
+                "Example: num_steps=[100, 200] requires weights=[w0, w1, w2]."
+            )
+
+       # print(f"total_iter: {total_iter}")
+
+        active_weight_mask = len(weights) - 1  # default to last weight
+
+        for i, num_step in enumerate(num_steps):
+           # print(f"i: {i}, num_step: {num_step}")
+
+            if total_iter < num_step:
+                active_weight_mask = i
+              #  print("Matched interval")
+                break
+
+        active_weight = weights[active_weight_mask]
+        self._term_cfg.weight = active_weight
+        env.reward_manager.set_term_cfg(term_name, self._term_cfg)
+
+       # print(f"current weight index: {active_weight_mask}")
+       # print(f"active weight: {self._term_cfg.weight}")
+
+       # if active_weight_mask < len(num_steps):
+           # print(f"current upper num_step: {num_steps[active_weight_mask]}")
+      #  else:
+           # print("current upper num_step: none, using final weight")
+
+        return self._term_cfg.weight
+                
+
+  
+
+

@@ -130,6 +130,7 @@ class OnPolicyRunnerCustom:
 
         # Start training
         start_iter = self.current_learning_iteration
+        
        # self.env.env.unwrapped.global_iteration = start_iter-1
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
