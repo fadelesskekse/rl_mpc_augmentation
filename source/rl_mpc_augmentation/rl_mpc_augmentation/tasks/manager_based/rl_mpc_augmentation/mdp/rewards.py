@@ -452,3 +452,27 @@ def air_time_vel_penalty(env: ManagerBasedRLEnv,
     reward = torch.exp(-lamda * scaled_excess)
 
     return reward
+
+
+    
+def forward_distance_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), min_dist: float = 0.15, max_dist: float = 0.30, sharpness: float = 100.0) -> torch.Tensor:
+    """Reward lateral distance between left and right parts of the robot."""
+    asset: Articulation = env.scene[asset_cfg.name]
+    body1_pos = asset.data.body_pos_w[:, asset_cfg.body_ids[0], :]
+    body2_pos = asset.data.body_pos_w[:, asset_cfg.body_ids[1], :]
+    root_quaternion_w = asset.data.root_link_pose_w[:, 3:7]
+    body1_pos_local = quat_apply_inverse(root_quaternion_w, body1_pos - asset.data.root_link_pos_w)
+    body2_pos_local = quat_apply_inverse(root_quaternion_w, body2_pos - asset.data.root_link_pos_w)
+
+    # forward separation only
+    dist = (torch.abs(body1_pos_local[:, 0]) + torch.abs(body2_pos_local[:, 0])) / 2.0
+
+    #dist = torch.abs(body1_pos_local[:, 0] - body2_pos_local[:, 0])
+
+    #d_min = torch.clamp(dist - min_dist, min=-0.5, max=0.0)
+   # d_max = torch.clamp(dist - max_dist, min=0.0, max=0.5)
+
+    #reward = (torch.exp(-sharpness * torch.abs(d_min)) +
+             # torch.exp(-sharpness * torch.abs(d_max))) / 2.0
+    
+    return dist
