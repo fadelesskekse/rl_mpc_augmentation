@@ -76,8 +76,8 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
         prim_path="/World/ground",
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=PLAYGROUND,  # None, ROUGH_TERRAINS_CFG
-        #max_init_terrain_level=PLAYGROUND.num_rows - 1,
-        max_init_terrain_level=0,
+        max_init_terrain_level=PLAYGROUND.num_rows - 1,
+        #max_init_terrain_level=0,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -150,7 +150,7 @@ class RlMpcAugmentationSceneCfg(InteractiveSceneCfg):
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)#_cust
+    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel_cust)#_cust
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
 
 ##
@@ -182,12 +182,12 @@ class CommandsCfg:
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-.1, .1), lin_vel_y=(-.1, 0.1), ang_vel_z=(-.1, .1)
         ),
-        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2.0 ,2.0)
-        ),
         # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(.5, .8), lin_vel_y=(0, 0), ang_vel_z=(0.0 ,0.0)
+        #     lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2.0 ,2.0)
         # ),
+        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+            lin_vel_x=(.5, .8), lin_vel_y=(0, 0), ang_vel_z=(0.0 ,0.0)
+        ),
 
 
 
