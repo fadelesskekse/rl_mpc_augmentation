@@ -416,4 +416,39 @@ class is_terminated_term_time_out_included(ManagerTermBase):
 
         
         return reset_buf.float()
+
+def air_time_vel_penalty(env: ManagerBasedRLEnv, 
+                         sensor_cfg: SceneEntityCfg,
+                         asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+                         nominal_air_time = .5,
+                         lamda: float = 10.0,):
     
+   
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    sensor_data = contact_sensor.data
+    
+    air_time = sensor_data.current_air_time[:, sensor_cfg.body_ids]  # (num_envs, num_bodies, 3)
+    #left is 0, right is 1
+    #print(f"body names: {sensor_cfg.body_names}")
+    #print(f"body names: {sensor_cfg.body_ids}")
+
+    air_time_excess = torch.clamp(air_time - nominal_air_time, min=0.0, max=1)  # (num_envs, num_feet)
+    avg_air_time_excess = torch.mean(air_time_excess, dim=1)  # (num_envs,)
+
+
+    asset: RigidObject = env.scene[asset_cfg.name]
+    vel = asset.data.root_lin_vel_b[:, :2]
+
+    vel_mag = torch.linalg.norm(vel, dim=1)
+
+    
+    #print(f"penalty {air_time}")
+   # print(f"penalty {air_time.shape}")
+
+     # Scale by current planar speed
+    scaled_excess = avg_air_time_excess * vel_mag  # (num_envs,)
+
+    # Reward near 1 when behavior is good, decays when excess airtime and speed increase
+    reward = torch.exp(-lamda * scaled_excess)
+
+    return reward
