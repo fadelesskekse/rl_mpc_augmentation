@@ -558,6 +558,11 @@ class RewardsCfg:
                                weight = 1, #controlled by curriculum
                                params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=["left_ankle_roll_link", "right_ankle_roll_link"]),
                                        "nominal_air_time" : .4,})
+    
+    foot_forward = RewTerm(func=mdp.forward_distance_reward,
+                           params={"asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),},
+                           weight = -2)
+
 
     
 
