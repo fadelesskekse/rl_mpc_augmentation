@@ -545,6 +545,11 @@ class RewardsCfg:
         },
     )
 
+    air_time_penalty = RewTerm(func=mdp.air_time_vel_penalty,
+                               weight = .5,
+                               params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=["left_ankle_roll_link", "right_ankle_roll_link"]),
+                                       "nominal_air_time" : .4,})
+
     
 
     # (1) Constant running reward
