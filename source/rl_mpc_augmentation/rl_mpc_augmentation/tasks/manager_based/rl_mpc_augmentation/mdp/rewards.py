@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg, ManagerTermBase
 from isaaclab.sensors import ContactSensor,RayCaster
-
+from isaaclab.utils.math import quat_apply_inverse
 import numpy as np
 
 if TYPE_CHECKING:
