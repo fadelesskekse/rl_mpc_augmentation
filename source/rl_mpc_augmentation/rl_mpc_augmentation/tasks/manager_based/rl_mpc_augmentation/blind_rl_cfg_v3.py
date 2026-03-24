@@ -32,12 +32,12 @@ from assets.g1.g1_bm import G1_BM_CFG, G1_BM_ACTION_SCALE,JOINT_NAMES_EXPR# pyri
 PLAYGROUND = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0),
     border_width=2.0,
-    num_rows=1, #10
+    num_rows=10, #10
     num_cols=3, #3
     horizontal_scale=.1,
     vertical_scale=.05,#.005
     slope_threshold=0.75,
-    difficulty_range=(1, 1), #0,1
+    difficulty_range=(0, 1), #0,1
     use_cache=False,
     sub_terrains={
         "stairs_up": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(step_height_range = (.01,.17),
@@ -153,12 +153,21 @@ class CurriculumCfg:
 
     terrain_levels = CurrTerm(func=mdp.terrain_levels_vel_cust)#_cust
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
-    air_time_curr = CurrTerm(
+    # air_time_curr = CurrTerm(
+    #     mdp.modify_reward_weight_cust,
+    #     params={
+    #         "term_name": "air_time_penalty",
+    #         "weights": [0.4, 0.5, 0.6,.7,.8,.9,1.0,1.1,1.2,1.3,1.4],
+    #         "num_steps": [1, 500,1000,1500,2000,2500,3000,3500,4000,4500],
+    #        # "num_steps": [38000, 38500, 39000,39500,40000],
+    #     },
+    # )
+    neg_z_vel_curr = CurrTerm(
         mdp.modify_reward_weight_cust,
         params={
-            "term_name": "air_time_penalty",
-            "weights": [0.4, 0.5, 0.6,.7,.8,.9,1.0,1.1,1.2,1.3,1.4],
-            "num_steps": [1, 500,1000,1500,2000,2500,3000,3500,4000,4500],
+            "term_name": "neg_z_vel",
+            "weights": [-3, -4, -5,-6,-7,-8,-9,-10,-11,-12,-13],
+            "num_steps": [30, 500,1000,1500,2000,2500,3000,3500,4000,4500],
            # "num_steps": [38000, 38500, 39000,39500,40000],
         },
     )
@@ -192,12 +201,12 @@ class CommandsCfg:
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2, 2)
         ),
-        # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2.0 ,2.0)
-        # ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(1, 1), lin_vel_y=(0, 0), ang_vel_z=(0.0 ,0.0)
+            lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2.0 ,2.0)
         ),
+        # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+        #     lin_vel_x=(1, 1), lin_vel_y=(0, 0), ang_vel_z=(0.0 ,0.0)
+        # ),
 
 
 
@@ -556,7 +565,7 @@ class RewardsCfg:
     )
 
     air_time_penalty = RewTerm(func=mdp.air_time_vel_penalty,
-                               weight = 1, #controlled by curriculum
+                               weight = .4, #controlled by curriculum
                                params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=["left_ankle_roll_link", "right_ankle_roll_link"]),
                                        "nominal_air_time" : .4,})
     
