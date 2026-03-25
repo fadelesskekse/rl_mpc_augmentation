@@ -162,15 +162,49 @@ class CurriculumCfg:
     #        # "num_steps": [38000, 38500, 39000,39500,40000],
     #     },
     # )
-    neg_z_vel_curr = CurrTerm(
+    # neg_z_vel_curr = CurrTerm(
+    #     mdp.modify_reward_weight_cust,
+    #     params={
+    #         "term_name": "neg_z_vel",
+    #         "weights": [-3, -4, -5,-6,-7,-8,-9,-10,-11,-12,-13],
+    #         "num_steps": [30, 200,400,600,800,1000,1200,1400,1600,1800],
+    #        # "num_steps": [38000, 38500, 39000,39500,40000],
+    #     },
+    # )
+
+    # foot_contact_vel_curr = CurrTerm(
+    #     mdp.modify_reward_weight_cust,
+    #     params={
+    #         "term_name": "foot_contact_vel_penalty",
+    #         "weights": [-.2, -4, -5,-6,-7,-8,-9,-10,-11,-12,-13],
+    #         "num_steps": [30, 200,400,600,800,1000,1200,1400,1600,1800],
+    #        # "num_steps": [38000, 38500, 39000,39500,40000],
+    #     },
+    # )
+
+  
+
+    # com_forward_penalty = CurrTerm(
+    #     mdp.modify_reward_weight_cust,
+    #     params={
+    #         "term_name": "com_forward_penalty",
+    #         "weights": [-80, -100, -120,-140,-160,-180,-200,],
+    #         "num_steps": [300, 600,900,1000,1300,1500],
+    #        # "num_steps": [38000, 38500, 39000,39500,40000],
+    #     },
+    # )
+
+
+    flat_orientation_l2_curr = CurrTerm(
         mdp.modify_reward_weight_cust,
         params={
-            "term_name": "neg_z_vel",
-            "weights": [-3, -4, -5,-6,-7,-8,-9,-10,-11,-12,-13],
-            "num_steps": [30, 500,1000,1500,2000,2500,3000,3500,4000,4500],
+            "term_name": "flat_orientation_l2",
+            "weights": [-60, -75, -90,-105,-120,-135],
+            "num_steps": [60, 1000,2000,3000,4000],
            # "num_steps": [38000, 38500, 39000,39500,40000],
         },
     )
+ 
 
 ##
 # MDP settings
@@ -541,8 +575,10 @@ class EventCfg:
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity, #_delayed
         mode="interval",
-        interval_range_s=(.25, 12),
+        interval_range_s=(.25, 12), #.25,12
+       # interval_range_s=(1, 1), #.25,12
         params={"velocity_range": {"x": (-.5, .5), "y": (-.5, .5)}},#,"curr_lim":.5} #was +-.5
+        #params={"velocity_range": {"x": (1, 1), "y": (0, 0)}},#,"curr_lim":.5} #was +-.5
                
     )
 
@@ -553,6 +589,29 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
+
+    # foot_contact_vel= RewTerm(
+    #     func=mdp.foot_contact_vel_penalty,
+    #     weight=-1,
+    #     params={
+    #         #"period": 0.6,
+    #         "offset": [0.0, 0.5],
+    #         "threshold": 0.55,
+    #         "command_name": "base_velocity",
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+    #         "buffer" : 0.15,
+    #         "lamda":  80.0,
+    #     },
+ 
+    # )
+
+    # com_forward_penalty = RewTerm(
+    #     func=mdp.com_ahead_of_feet_vel_reward,
+    #     weight = 1,
+    #     params={"lamda": 2,
+    #             "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),}
+        
+    # )
 
     soft_landing = RewTerm(
         func=mdp.soft_landing,
@@ -678,7 +737,7 @@ class RewardsCfg:
     #(7) Flat Orientation
     #Justification: Promote robot to be upright
     # -- robot
-    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-15.0) #was -9
+    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-60.0) #was -9
     #base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.78})
 
     #() Minimize Ankle Torque

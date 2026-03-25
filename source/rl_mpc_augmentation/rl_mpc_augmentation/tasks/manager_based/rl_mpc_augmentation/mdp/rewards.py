@@ -11,11 +11,74 @@ from typing import TYPE_CHECKING
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg, ManagerTermBase
 from isaaclab.sensors import ContactSensor,RayCaster
-from isaaclab.utils.math import quat_apply_inverse
+from isaaclab.utils.math import quat_apply_inverse, quat_apply
 import numpy as np
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
+
+def foot_contact_vel_penalty(
+    env: ManagerBasedRLEnv,
+    offset: list[float],
+    sensor_cfg: SceneEntityCfg,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    nominal: float = 0.5,
+    threshold: float = 0.5,
+    buffer: float = 0.05,
+    lamda: float = 1.0,
+    command_name=None,
+) -> torch.Tensor:
+
+    
+    
+    period = env.action_manager.get_term("gait_cycle").processed_actions
+    
+
+    eps = nominal # or any small positive value
+    period = torch.where(period == 0, eps, period)
+
+   # print(f"period in reward: {period}")
+
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    is_contact = contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids] > 0
+
+    elapsed_time = (env.episode_length_buf * env.step_dt).unsqueeze(1) 
+
+    global_phase = (elapsed_time % period) / period    
+
+
+    #print(f"global_phase in gait reward: {global_phase}")
+    phases = []
+    for offset_ in offset:
+        phase = (global_phase + offset_) % 1.0
+        phases.append(phase)
+    leg_phase = torch.cat(phases, dim=-1)
+
+
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    # full robot linear velocity magnitude in world frame
+    robot_vel = asset.data.root_lin_vel_w
+    robot_speed = torch.linalg.norm(robot_vel, dim=1)   # shape: [num_envs]
+
+    penalty = torch.zeros(env.num_envs, dtype=torch.float, device=env.device)
+    stance_cutoff = threshold - buffer
+    for i in range(len(sensor_cfg.body_ids)):
+        is_stance = leg_phase[:, i] < stance_cutoff
+
+        # leg should be swinging, but is in contact
+        caught_contact = (~is_stance) & is_contact[:, i]
+
+        # penalize robot speed when this happens
+        penalty += robot_speed * caught_contact.float()
+
+    if command_name is not None:
+        cmd_norm = torch.norm(env.command_manager.get_command(command_name), dim=1)
+        penalty *= (cmd_norm > 0.4).float()
+
+    penalty = 1.0 - torch.exp(-lamda* penalty)
+
+    return penalty
 
 def soft_landing(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, command_name: str, command_threshold: float) -> torch.Tensor:
     """Penalize high impact forces at landing to encourage soft footfalls."""
@@ -476,3 +539,61 @@ def forward_distance_reward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = 
              # torch.exp(-sharpness * torch.abs(d_max))) / 2.0
     
     return dist
+
+def com_ahead_of_feet_vel_reward(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    lamda: float = 1.0,
+) -> torch.Tensor:
+    """
+    Reward based on how far the robot CoM is ahead of its feet, scaled by robot speed.
+
+    For each foot:
+      contribution = max(x_com - x_foot, 0)
+
+    Then average across feet and multiply by robot velocity magnitude.
+    """
+
+
+    asset: Articulation = env.scene[asset_cfg.name]
+
+
+    body1_pos = asset.data.body_pos_w[:, asset_cfg.body_ids[0], :]
+    body2_pos = asset.data.body_pos_w[:, asset_cfg.body_ids[1], :]
+
+    root_quaternion_w = asset.data.root_link_pose_w[:, 3:7]
+
+    robot_pos = asset.data.root_link_pos_w 
+
+    robot_pos[:, 2] += 2
+
+  
+
+
+    body1_pos_local = quat_apply_inverse(root_quaternion_w,  body1_pos - robot_pos )
+    body2_pos_local = quat_apply_inverse(root_quaternion_w, body2_pos - robot_pos)
+
+    body1_x = body1_pos_local[:, 0]
+    body2_x = body2_pos_local[:, 0]
+
+  #  print(f"Left Foot Rel Body Pos: {body1_x}")
+   # print(f"Right Foot Rel Body Pos: {body2_x}")
+
+    max_positive_ahead = torch.clamp(torch.max(body1_x, body2_x), min=0.0)
+
+    
+    #print(f"size of max_positive_ahead: {max_positive_ahead.shape}")
+
+   # Robot velocity magnitude
+    robot_vel = asset.data.root_lin_vel_w                     # [num_envs, 3]
+    robot_speed = torch.linalg.norm(robot_vel, dim=1)         # [num_envs]
+
+    reward = max_positive_ahead * robot_speed
+
+   # reward = 1.0 - torch.exp(-lamda * reward)
+
+    return reward
+
+    #return max_positive_ahead
+
+  
