@@ -162,15 +162,15 @@ class CurriculumCfg:
     #        # "num_steps": [38000, 38500, 39000,39500,40000],
     #     },
     # )
-    neg_z_vel_curr = CurrTerm(
-        mdp.modify_reward_weight_cust,
-        params={
-            "term_name": "neg_z_vel",
-            "weights": [-3, -6, -9,-12,],
-            "num_steps": [60, 500,1000,],
-           # "num_steps": [38000, 38500, 39000,39500,40000],
-        },
-    )
+    # neg_z_vel_curr = CurrTerm(
+    #     mdp.modify_reward_weight_cust,
+    #     params={
+    #         "term_name": "neg_z_vel",
+    #         "weights": [-3, -6, -9,-12,],
+    #         "num_steps": [60, 500,1000,],
+    #        # "num_steps": [38000, 38500, 39000,39500,40000],
+    #     },
+    # )
 
     # foot_contact_vel_curr = CurrTerm(
     #     mdp.modify_reward_weight_cust,
