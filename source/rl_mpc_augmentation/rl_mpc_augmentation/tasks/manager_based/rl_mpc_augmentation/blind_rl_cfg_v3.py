@@ -162,15 +162,15 @@ class CurriculumCfg:
     #        # "num_steps": [38000, 38500, 39000,39500,40000],
     #     },
     # )
-    # neg_z_vel_curr = CurrTerm(
-    #     mdp.modify_reward_weight_cust,
-    #     params={
-    #         "term_name": "neg_z_vel",
-    #         "weights": [-3, -4, -5,-6,-7,-8,-9,-10,-11,-12,-13],
-    #         "num_steps": [30, 200,400,600,800,1000,1200,1400,1600,1800],
-    #        # "num_steps": [38000, 38500, 39000,39500,40000],
-    #     },
-    # )
+    neg_z_vel_curr = CurrTerm(
+        mdp.modify_reward_weight_cust,
+        params={
+            "term_name": "neg_z_vel",
+            "weights": [-3, -6, -9,-12,],
+            "num_steps": [60, 500,1000,],
+           # "num_steps": [38000, 38500, 39000,39500,40000],
+        },
+    )
 
     # foot_contact_vel_curr = CurrTerm(
     #     mdp.modify_reward_weight_cust,
@@ -195,15 +195,15 @@ class CurriculumCfg:
     # )
 
 
-    flat_orientation_l2_curr = CurrTerm(
-        mdp.modify_reward_weight_cust,
-        params={
-            "term_name": "flat_orientation_l2",
-            "weights": [-60, -75, -90,-105,-120,-135],
-            "num_steps": [60, 1000,2000,3000,4000],
-           # "num_steps": [38000, 38500, 39000,39500,40000],
-        },
-    )
+    # flat_orientation_l2_curr = CurrTerm(
+    #     mdp.modify_reward_weight_cust,
+    #     params={
+    #         "term_name": "flat_orientation_l2",
+    #         "weights": [-60, -75, -90,-105,-120,-135],
+    #         "num_steps": [60, 1000,2000,3000,4000],
+    #        # "num_steps": [38000, 38500, 39000,39500,40000],
+    #     },
+    # )
  
 
 ##
@@ -239,7 +239,7 @@ class CommandsCfg:
             lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2.0 ,2.0)
         ),
         # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(1, 1), lin_vel_y=(0, 0), ang_vel_z=(0.0 ,0.0)
+        #     lin_vel_x=(.6, .6), lin_vel_y=(0, 0), ang_vel_z=(0.0 ,0.0)
         # ),
 
 
@@ -670,6 +670,7 @@ class RewardsCfg:
     #base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
 
     neg_z_vel = RewTerm(func=mdp.lin_vel_z_negative_l2, weight=-3.0)
+   # body_lin_acc_l2_z = RewTerm(func=mdp.body_lin_acc_l2_z, weight = 1,params={"asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),})
     #z_accel = RewTerm(func=mdp.body_lin_acc_l2_z,weight=-1)
     #lin_accel = RewTerm(func=mdp.body_lin_acc_l2,weight = -1/3000)
     #pos_z_vel = RewTerm(func=mdp.lin_vel_z_positive_l2, weight=-2.0)
