@@ -204,6 +204,17 @@ class CurriculumCfg:
     #        # "num_steps": [38000, 38500, 39000,39500,40000],
     #     },
     # )
+
+    
+    # foot_collision_joint_movement = CurrTerm(
+    #     mdp.modify_reward_weight_cust,
+    #     params={
+    #         "term_name": "foot_collision_joint_movement",
+    #         "weights": [.1,.2, .225,.25],
+    #         "num_steps": [2000, 6000,10000],
+    #        # "num_steps": [38000, 38500, 39000,39500,40000],
+    #     },
+    # )
  
 
 ##
@@ -239,7 +250,7 @@ class CommandsCfg:
             lin_vel_x=(-.5, 1), lin_vel_y=(-.5, 0.5), ang_vel_z=(-2.0 ,2.0)
         ),
         # limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(.6, .6), lin_vel_y=(0, 0), ang_vel_z=(0.0 ,0.0)
+        #     lin_vel_x=(.8, .8), lin_vel_y=(0, 0), ang_vel_z=(0 ,0)
         # ),
 
 
@@ -544,7 +555,7 @@ class EventCfg:
         func=mdp.reset_root_state_uniform_grouped_yaws,
         mode="reset",
         params={
-            "pose_range": {"x": (0, 0), "y": (0, 0), "yaw": (-3.14, 3.14)},
+            "pose_range": {"x": (-.05, 0.05), "y": (-.05, 0.05), "yaw": (-3.14, 3.14)},
             "velocity_range": {
                 "x": (-.025, 0.025),
                 "y": (-0.025, 0.025),
@@ -695,6 +706,42 @@ class RewardsCfg:
         }
     )
 
+    foot_collision_joint_movement = RewTerm(func=mdp.foot_collision_joint_movement_latched,
+                                            weight = .25,
+                                            params={
+                                                "latch_steps": 5,
+                                                "z_force_threshold": 5.0,
+                                                "xy_force_threshold": 10.0,
+                                                "decay": False,
+                                                "asset_cfg": SceneEntityCfg(
+                                                    "robot",
+                                                    joint_names=[
+                                                        ".*_hip_pitch_.*",
+                                                        ".*_knee_joint.*",
+
+                                                    ],
+                                                ),
+                                                "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+                                            },
+                                            )
+    
+    # foot_collision_joint_movement_test = RewTerm(func=mdp.foot_collision_joint_movement_test,
+    #                                         weight = 1,
+    #                                         params={
+    #                                             "asset_cfg": SceneEntityCfg(
+    #                                                 "robot",
+    #                                                 joint_names=[
+    #                                                     ".*_hip_pitch_.*",
+    #                                                     ".*_knee_joint.*",
+
+    #                                                 ],
+    #                                             ),
+    #                                             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+    #                                         },
+    #                                         )
+  
+
+
     #(6) Joint deviation from defaults
     # Justification: Encourage robot to stay near nominal pose
     joint_deviation_arms = RewTerm(
@@ -725,7 +772,7 @@ class RewardsCfg:
     )
     joint_deviation_legs = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1.1,
+        weight=-1.3,#-1.1
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
     )
 
@@ -915,4 +962,3 @@ class RobotPlayEnvCfg(RlMpcAugmentationEnvCfg):
 
 
         self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
-

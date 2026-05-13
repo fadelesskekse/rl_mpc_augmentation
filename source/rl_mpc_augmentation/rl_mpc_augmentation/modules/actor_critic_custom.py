@@ -719,6 +719,17 @@ class ActorCriticRMA(nn.Module):
 
     def get_actions_log_prob(self, actions):
         return self.distribution.log_prob(actions).sum(dim=-1)
+    
+    # def get_actions_log_prob(self, actions):
+    #     print(f"[get_actions_log_prob] actions.shape: {actions.shape}")
+
+    #     actions_log_prob_per_dim = self.distribution.log_prob(actions)
+    #     print(f"[get_actions_log_prob] log_prob before sum shape: {actions_log_prob_per_dim.shape}")
+
+    #     actions_log_prob = actions_log_prob_per_dim.sum(dim=-1)
+    #     print(f"[get_actions_log_prob] log_prob after sum shape: {actions_log_prob.shape}")
+
+    #     return actions_log_prob
 
     def update_normalization(self, obs):
         if self.actor_obs_normalization:

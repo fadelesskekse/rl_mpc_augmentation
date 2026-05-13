@@ -271,8 +271,202 @@ def body_lin_acc_l2_z(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneE
     # L2 kernel → square it
     return torch.sum(torch.square(z_acc), dim=1)
 
+def foot_collision_joint_movement(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),) -> torch.Tensor:
+    
+
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    hip_roll_joint_vel = asset.data.joint_vel[:, asset_cfg.joint_ids] #left hip right hip, left knee right knee
+   
+
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+
+    forces = contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids]
+
+    # print(f"joint_ids: {asset_cfg.joint_ids}")
+    # print(f"body_ids: {sensor_cfg.body_ids}")
+    # print(f"body_names: {sensor_cfg.body_names}")
+
+   # print(f"joint_angles: {hip_roll_joint_angles}")
+  #  print(f"joint_angles.shape: {hip_roll_joint_angles.shape}")
+
+    #print(f"forces: {forces}")
+   # print(f"forces shape: {forces.shape}")
+
+    left_hip_vel = hip_roll_joint_vel[:,0]
+    left_knee_vel = hip_roll_joint_vel[:,2]
+
+
+    right_hip_vel = hip_roll_joint_vel[:,1]
+    right_knee_vel = hip_roll_joint_vel[:,3]
+
+    
+
+
+    left_foot_x_force = torch.abs(forces[:, 0, 0])
+    left_foot_z_force = forces[:, 0, 2]
+
+    right_foot_x_force = torch.abs(forces[:, 1, 0])
+    right_foot_z_force = forces[:, 1, 2]
+
+
+    left_collision = (left_foot_z_force < 100.0) & (left_foot_x_force > 5.0)
+    right_collision = (right_foot_z_force < 100.0) & (right_foot_x_force > 5.0)
+
+
+    left_reward = left_collision * (
+            torch.clamp(left_knee_vel, min=0.0) + torch.clamp(-left_hip_vel, min=0.0)
+        )
+
+    right_reward = right_collision * (
+            torch.clamp(right_knee_vel, min=0.0) + torch.clamp(-right_hip_vel, min=0.0)
+        )
+
+    reward = left_reward + right_reward
+
+    return reward
+
+
+
+class foot_collision_joint_movement_latched(ManagerTermBase):
+    """Keep the collision-escape reward active for a short number of steps."""
+
+    def __init__(self, cfg, env: ManagerBasedRLEnv):
+        super().__init__(cfg, env)
+        self._left_latch = torch.zeros(env.num_envs, device=env.device, dtype=torch.long)
+        self._right_latch = torch.zeros(env.num_envs, device=env.device, dtype=torch.long)
+
+    def reset(self, env_ids: torch.Tensor | None = None) -> dict[str, float]:
+        if env_ids is None:
+            self._left_latch.zero_()
+            self._right_latch.zero_()
+        else:
+            self._left_latch[env_ids] = 0
+            self._right_latch[env_ids] = 0
+        return {}
+
+    def __call__(
+        self,
+        env: ManagerBasedRLEnv,
+        sensor_cfg: SceneEntityCfg,
+        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+        latch_steps: int = 5,
+        z_force_threshold: float = 100.0,
+        xy_force_threshold: float = 5.0,
+        decay: bool = False,
+    ) -> torch.Tensor:
+        asset: RigidObject = env.scene[asset_cfg.name]
+        joint_vel = asset.data.joint_vel[:, asset_cfg.joint_ids]
+
+        contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+        forces = contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids]
+
+        left_hip_vel = joint_vel[:, 0]
+        right_hip_vel = joint_vel[:, 1]
+        left_knee_vel = joint_vel[:, 2]
+        right_knee_vel = joint_vel[:, 3]
+
+        #left_foot_x_force = torch.abs(forces[:, 0, 0])
+       # left_foot_y_force = torch.abs(forces[:, 0, 1])
+        left_foot_z_force = torch.abs(forces[:, 0, 2])
+
+       # right_foot_x_force = torch.abs(forces[:, 1, 0])
+       # right_foot_y_force = torch.abs(forces[:, 1, 1])
+        right_foot_z_force = torch.abs(forces[:, 1, 2])
+
+        left_foot_xy_force = torch.linalg.norm(forces[:, 0, :2], dim=1)
+        right_foot_xy_force = torch.linalg.norm(forces[:, 1, :2], dim=1)
+
+
+        left_collision = (left_foot_z_force < z_force_threshold) & (left_foot_xy_force > xy_force_threshold)
+        right_collision = (right_foot_z_force < z_force_threshold) & (right_foot_xy_force > xy_force_threshold)
+
+        self._left_latch[left_collision] = latch_steps
+        self._right_latch[right_collision] = latch_steps
+
+        left_active = self._left_latch > 0
+        right_active = self._right_latch > 0
+
+        if decay and latch_steps > 0:
+            left_scale = self._left_latch.float() / float(latch_steps)
+            right_scale = self._right_latch.float() / float(latch_steps)
+        else:
+            left_scale = left_active.float()
+            right_scale = right_active.float()
+
+        left_reward = left_scale * (
+            torch.clamp(left_knee_vel, min=0.0) + torch.clamp(-left_hip_vel, min=0.0)
+        )
+        right_reward = right_scale * (
+            torch.clamp(right_knee_vel, min=0.0) + torch.clamp(-right_hip_vel, min=0.0)
+        )
+
+        self._left_latch[left_active] -= 1
+        self._right_latch[right_active] -= 1
+
+        return left_reward + right_reward
+
+
+def foot_collision_joint_movement_test(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),) -> torch.Tensor:
+    
+
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    hip_roll_joint_vel = asset.data.joint_vel[:, asset_cfg.joint_ids] #left hip right hip, left knee right knee
+   
+
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+
+    forces = contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids]
+
+    # print(f"joint_ids: {asset_cfg.joint_ids}")
+    # print(f"body_ids: {sensor_cfg.body_ids}")
+    # print(f"body_names: {sensor_cfg.body_names}")
+
+   # print(f"joint_angles: {hip_roll_joint_angles}")
+  #  print(f"joint_angles.shape: {hip_roll_joint_angles.shape}")
+
+    #print(f"forces: {forces}")
+   # print(f"forces shape: {forces.shape}")
+
+    left_hip_vel = hip_roll_joint_vel[:,0]
+    left_knee_vel = hip_roll_joint_vel[:,2]
+
+
+    right_hip_vel = hip_roll_joint_vel[:,1]
+    right_knee_vel = hip_roll_joint_vel[:,3]
+
+    
+
+
+    left_foot_x_force = torch.abs(forces[:, 0, 0])
+    left_foot_z_force = forces[:, 0, 2]
+
+    right_foot_x_force = torch.abs(forces[:, 1, 0])
+    right_foot_z_force = forces[:, 1, 2]
+
+
+    left_collision = (left_foot_z_force < 50.0) & (left_foot_x_force > 20.0)
+    right_collision = (right_foot_z_force < 50.0) & (right_foot_x_force > 20.0)
+
+
+    left_reward = left_collision * (
+            torch.clamp(left_knee_vel, min=0.0) + torch.clamp(-left_hip_vel, min=0.0)
+        )
+
+    right_reward = right_collision * (
+            torch.clamp(right_knee_vel, min=0.0) + torch.clamp(-right_hip_vel, min=0.0)
+        )
+
+    reward = left_reward + right_reward
+
+    return left_foot_z_force
+
+
+ 
 
 def lin_vel_x(
+        
     env: ManagerBasedRLEnv,
     command_name: str,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
